@@ -1,0 +1,39 @@
+[build-system]
+requires = ['scikit-build-core', 'pybind11', 'cibuildwheel']
+build-backend = 'scikit_build_core.build'
+
+[project]
+name = 'evn'
+version = '0.0.1'
+requires-python = '>=3.9'
+dependencies = [
+    'ruff'
+]
+
+[project.optional-dependencies]
+dev = [
+    'pytest',
+    'pytest-xdist',
+]
+
+[project.scripts]
+evn = 'evn.__main__:main'
+
+[tool.ruff]
+lint.ignore = [
+   'E731', #  [ ] Do not assign a `lambda` expression, use a `def`
+   'E402', #  [ ] Module level import not at top of file
+   'E741', #  [ ] Ambiguous variable name: `I`
+   'E701', #  [ ] Multiple statements on one line (colon)
+   'F403', #  [ ] `from Attention_module import *` used; unable to detect undefined names
+   'F405',
+   'F821',
+   'F841',
+
+]
+lint.dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?)|ic)$'
+line-length = 113
+target-version = 'py39'
+format.quote-style = 'single'
+format.indent-style = 'space'
+format.docstring-code-format = true
