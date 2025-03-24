@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 
+import evn
+
 @dataclass
 class FormatHistory:
     """Tracks original and formatted code for all files being processed."""
@@ -41,8 +43,8 @@ class CodeFormatter:
     """Formats Python files using a configurable pipeline of FormatStep actions."""
     actions: list[FormatStep]
     history: FormatHistory = field(default_factory=FormatHistory)
-    cpp_mark: hgeom.IdentifyFormattedBlocks = field(default_factory=hgeom.IdentifyFormattedBlocks)
-    cpp_aln: hgeom.PythonLineTokenizer = field(default_factory=hgeom.PythonLineTokenizer)
+    cpp_mark: evn.IdentifyFormattedBlocks = field(default_factory=evn.IdentifyFormattedBlocks)
+    cpp_aln: evn.PythonLineTokenizer = field(default_factory=evn.PythonLineTokenizer)
 
     def __post_init__(self):
         for action in self.actions:

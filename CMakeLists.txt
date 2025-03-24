@@ -3,6 +3,7 @@ project(evn LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(PYBIND11_FINDPYTHON ON)
 
 find_package(pybind11 REQUIRED)
 include_directories(${PROJECT_SOURCE_DIR})

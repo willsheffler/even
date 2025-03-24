@@ -296,15 +296,13 @@ class PythonLineTokenizer {
         }
         return true;
     }
-
-  private:
     // Flushes a block of LineInfo objects into output.
     void flush_block(vector<LineInfo> &block, vector<string> &output,
                      bool add_fmt_tag = false, bool debug = false) {
         if (block.empty()) return;
         if (block.size() == 1) {
             LineInfo const &info = block.at(0);
-            if (is_oneline_statement(info.line)) {
+            if (is_oneline_statement(info.tokens)) {
                 output.push_back(info.indent + "#             fmt: off");
                 output.push_back(rstrip(info.line));
                 output.push_back(info.indent + "#             fmt: on");
@@ -469,88 +467,19 @@ class PythonLineTokenizer {
         return TokenType::Exact;
     }
 
-    bool is_oneline_statement(string const &line) {
-        if (line.empty()) { return false; }
-        string trimmed = line;
-        size_t firstNonSpace = trimmed.find_first_not_of(" \t");
-        if (firstNonSpace == string::npos) return false; // Empty line
-        trimmed = trimmed.substr(firstNonSpace);
-        if (trimmed[0] == '#') { return false; }
-        static const vector<string> keywords = {
-            "if ", "elif ", "else:", "for ", "def ", "class "};
-
-        bool foundKeyword = false;
-        string keywordFound;
-        for (const auto &keyword : keywords) {
-            if (trimmed.compare(0, keyword.length(), keyword) == 0) {
-                foundKeyword = true;
-                keywordFound = keyword;
-                break;
-            }
-        }
-        if (!foundKeyword) { return false; }
-
-        // Now we need to find the colon that ends the statement header
-        size_t colonPos = 0;
-        bool inString = false;
-        char stringDelimiter = 0;
-        bool escaped = false;
-        int parenLevel = 0;
-
-        // For else:, we already know the colon position
-        if (keywordFound == "else:") {
-            colonPos = firstNonSpace + 4; // "else" length
-        } else {
-            // For other keywords, we need to find the colon
-            for (size_t i = 0; i < trimmed.length(); i++) {
-                char c = trimmed[i];
-
-                // Handle string delimiters
-                if ((c == '"' || c == '\'') && !escaped) {
-                    if (!inString) {
-                        inString = true;
-                        stringDelimiter = c;
-                    } else if (c == stringDelimiter) {
-                        inString = false;
-                    }
-                }
-
-                // Handle escaping
-                if (c == '\\' && !escaped) {
-                    escaped = true;
-                    continue;
-                } else {
-                    escaped = false;
-                }
-
-                // Track parentheses level (ignore if in string)
-                if (!inString) {
-                    if (c == '(' || c == '[' || c == '{') {
-                        parenLevel++;
-                    } else if (c == ')' || c == ']' || c == '}') {
-                        parenLevel--;
-                    } else if (c == ':' && parenLevel == 0) {
-                        colonPos = firstNonSpace + i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        // If we couldn't find a proper colon, it's not a valid statement
-        if (colonPos == 0 || colonPos >= line.length() - 1) { return false; }
-
-        // Now check if there's an action after the colon
-        string afterColon = line.substr(colonPos + 1);
-        size_t actionStart = afterColon.find_first_not_of(" \t");
-
-        // If there's nothing after the colon or just a comment, it's not an
-        // inline action
-        if (actionStart == string::npos || afterColon[actionStart] == '#') {
+    bool is_oneline_statement(vector<string> const &tokens) {
+        if (tokens.empty()) return false;
+        static const vector<string> keywords = {"if",    "elif", "else", "for",
+                                                "while", "def",  "class"};
+        if (find(keywords.begin(), keywords.end(), tokens[0]) == keywords.end())
             return false;
-        }
-
-        return true;
+        for (int i = 1; i < tokens.size(); ++i)
+            if (tokens[i] == ":") {
+                if (i == tokens.size() - 1) return false;
+                if (tokens[i + 1][0] == '#') return false;
+                return true;
+            }
+        return false;
     }
 };
 
@@ -577,6 +506,8 @@ PYBIND11_MODULE(_token_column_format, m) {
         .def("tokens_match", &PythonLineTokenizer::tokens_match,
              "Compare two token vectors using wildcards for identifiers, "
              "strings, and numerics")
+        .def("is_oneline_statement", &PythonLineTokenizer::is_oneline_statement,
+             py::arg("tokens"), "Check if a line is an oneline statement")
         .def("reformat_buffer", &PythonLineTokenizer::reformat_buffer,
              py::arg("code"), py::arg("add_fmt_tag") = false,
              py::arg("debug") = false,
@@ -588,5 +519,5 @@ PYBIND11_MODULE(_token_column_format, m) {
              py::arg("debug") = false,
              "Reformat a code buffer (given as a vector of lines) by grouping "
              "lines with matching token patterns and indentation into blocks "
-             "and aligning them into evn columns.");
+             "and  inorkeywords.begin(), keywords.end(), <stcolumns.");
 }
