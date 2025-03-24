@@ -63,6 +63,7 @@ class CodeFormatter:
             if debug: print('*************************************')
             if debug: print(code,'\n************ orig ****************')
             for action in self.actions:
+                if debug: print(action.__class__.__name__, flush=True)
                 if dryrun: print(f"Dry run: {action.__class__.__name__} on {filename}")
                 else: code = action.apply_formatting(code, self.history)
                 if debug: print(code,f'\n************ {action.__class__.__name__} ****************')
@@ -104,7 +105,9 @@ class RuffFormat(FormatStep):
             return process.stdout
         except subprocess.CalledProcessError as e:
             print("Error running ruff format:", e.stderr)
-            return code  # Return original if formatting fails
+            print("Original code:\n", code, flush=True)
+            # return code  # Return original if formatting fails
+            raise e from None
 
 re_two_blank_lines = re.compile(r"\n\s*\n\s*\n")
 

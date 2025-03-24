@@ -16,6 +16,7 @@
 
 namespace py = pybind11;
 using namespace std;
+bool debug = false;
 
 // Character group indices for substitution matrix
 enum CharGroup {
@@ -117,9 +118,8 @@ array<array<float, NUM_GROUPS>, NUM_GROUPS> create_default_submatrix() {
     // Exact matches get 1.0
     for (int i = 0; i < NUM_GROUPS; i++) matrix[i][i] = 1.0f;
 
-    const vector<CharGroup> keyGroups = {
-        EQUAL, COLON, COMMA,    BRACKET_OPEN, PAREN_OPEN,
-        PLUS,  MINUS, ASTERISK, SLASH,        UPPERCASE};
+    const vector<CharGroup> keyGroups = {EQUAL, COLON, COMMA,    BRACKET_OPEN, PAREN_OPEN,
+                                         PLUS,  MINUS, ASTERISK, SLASH,        UPPERCASE};
 
     for (const auto &group : keyGroups) matrix[group][group] = 5.0;
     matrix[EQUAL][EQUAL] = 10.0;
@@ -168,9 +168,7 @@ array<array<float, NUM_GROUPS>, NUM_GROUPS> create_default_submatrix() {
 // string or std::string::npos if the string contains only whitespace.
 size_t find_last_non_whitespace(const std::string &str) {
     for (std::size_t i = str.size(); i > 0; --i) {
-        if (!std::isspace(static_cast<unsigned char>(str[i - 1]))) {
-            return i - 1;
-        }
+        if (!std::isspace(static_cast<unsigned char>(str[i - 1]))) { return i - 1; }
     }
     return std::string::npos;
 }
@@ -188,8 +186,7 @@ bool is_oneline_statement(string const &line) {
     if (firstNonSpace == string::npos) return false; // Empty line
     trimmed = trimmed.substr(firstNonSpace);
     if (trimmed[0] == '#') { return false; }
-    const vector<string> keywords = {
-        "if ", "elif ", "else:", "for ", "def ", "class "};
+    const vector<string> keywords = {"if ", "elif ", "else:", "for ", "def ", "class "};
 
     bool foundKeyword = false;
     string keywordFound;
@@ -258,9 +255,7 @@ bool is_oneline_statement(string const &line) {
 
     // If there's nothing after the colon or just a comment, it's not an inline
     // action
-    if (actionStart == string::npos || afterColon[actionStart] == '#') {
-        return false;
-    }
+    if (actionStart == string::npos || afterColon[actionStart] == '#') { return false; }
 
     return true;
 }
@@ -274,8 +269,7 @@ string get_indentation(string const &line) {
 
 bool is_whitespace(const std::string &str) {
     return str.empty() ||
-           std::all_of(str.begin(), str.end(),
-                       [](unsigned char c) { return std::isspace(c); });
+           std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
 }
 
 class IdentifyFormattedBlocks {
@@ -291,43 +285,37 @@ class IdentifyFormattedBlocks {
         sub_matrix = create_default_submatrix();
     }
 
-    void set_substitution_matrix(CharGroup i, CharGroup j, float val) {
-        sub_matrix[i][j] = val;
-    }
+    void set_substitution_matrix(CharGroup i, CharGroup j, float val) { sub_matrix[i][j] = val; }
 
     // Compute similarity score between two lines
     float compute_similarity_score(string const &line1, string const &line2) {
-        // Handle empty lines
+        if (debug) cerr << "compute_similarity_score " << line1 << " " << line2 << endl;
         if (line1.empty() || line2.empty()) return 0.0f;
         size_t indent1 = line1.find_first_not_of(" \t");
         size_t indent2 = line2.find_first_not_of(" \t");
         if (indent1 != indent2) return 0.0f;
-
-        // Compute alignment score
         float alignmentScore = 0.0f;
-
         size_t len1 = line1.size();
         size_t len2 = line2.size();
 
         // Score character by character for alignment
         for (size_t i = 0; i < min(len1, len2); i++) {
             if (isalnum(static_cast<unsigned char>(line1[i])) &&
-                isalnum(static_cast<unsigned char>(line2[i])) &&
-                line1[i] != line2[i])
+                isalnum(static_cast<unsigned char>(line2[i])) && line1[i] != line2[i])
                 continue;
             CharGroup g1 = get_char_group(line1[i]);
             CharGroup g2 = get_char_group(line2[i]);
+            if (debug) cerr << i << " g1 " << g1 << " g2 " << g2 << endl;
             alignmentScore += sub_matrix[g1][g2];
         }
+        if (debug) cerr << "adject for len" << endl;
         float maxlen = static_cast<float>(max(line1.size(), line2.size()));
         alignmentScore = alignmentScore / sqrt(maxlen);
-
-        // Penalize for length difference
-        float lengthPenalty =
-            1.0f - (abs(static_cast<int>(len1) - static_cast<int>(len2)) /
-                    static_cast<float>(max(len1, len2)));
-
-        // Combine scores with weights
+        float lengthPenalty = 1.0f - (abs(static_cast<int>(len1) - static_cast<int>(len2)) /
+                                      static_cast<float>(max(len1, len2)));
+        if (debug)
+            cerr << "alignmentScore " << alignmentScore << " lengthPenalty " << lengthPenalty
+                 << endl;
         return 0.7f * alignmentScore + 0.3f * lengthPenalty;
     }
 
@@ -337,18 +325,11 @@ class IdentifyFormattedBlocks {
 
         for (string const &line : lines) {
             if (line.find("#             fmt:") != string::npos) continue;
-            if (is_whitespace(line) && output.size() &&
-                is_whitespace(output.back()))
-                continue;
+            if (is_whitespace(line) && output.size() && is_whitespace(output.back())) continue;
             output.push_back(line);
         }
-
-        // Join lines back into a string
         ostringstream result;
-        for (size_t i = 0; i < output.size(); i++) {
-            result << output[i];
-            if (i < output.size() - 1) result << "\n";
-        }
+        for (string const &line : output) { result << line << endl; }
         return result.str();
     }
 
@@ -382,31 +363,37 @@ class IdentifyFormattedBlocks {
         consecutive_high_scores = 0;
         for (size_t i = 1; i < lines.size(); i++) {
             if (is_multiline(lines[i - 1]) || is_multiline(lines[i])) {
+                if (debug) cerr << "multiline " << lines[i] << endl;
                 maybe_close_formatted_block();
-                // cout << "multi " << lines[i] << endl;
                 output.push_back(lines[i]);
                 scores.push_back(0.0f);
                 continue;
             }
             string i_indent = get_indentation(lines[i]);
             if (!in_formatted_block && is_oneline_statement(lines[i])) {
+                if (debug) cerr << "oneline " << lines[i] << endl;
                 maybe_close_formatted_block();
                 // cout << "single " << lines[i] << endl;
                 output.push_back(i_indent + "#             fmt: off");
                 output.push_back(lines[i]);
                 output.push_back(i_indent + "#             fmt: on");
                 scores.push_back(0.0f);
+                scores.push_back(0.0f);
+                scores.push_back(0.0f);
                 continue;
             }
             scores.push_back(compute_similarity_score(lines[i - 1], lines[i]));
             if (scores.back() >= threshold) {
-                // cout << "block " << scores.back() << " " << lines[i] << endl;
+                if (debug) cerr << "block " << scores.back() << " " << lines[i] << endl;
                 consecutive_high_scores++;
                 if (consecutive_high_scores >= 1 && !in_formatted_block) {
                     in_formatted_block = true;
-                    if (output.size()) output.pop_back();
-                    output.push_back(i_indent + "#             fmt: off");
+                    output.back() = i_indent + "#             fmt: off";
                     output.push_back(lines[i - 1]);
+                    // auto tmp = scores.back();
+                    // scores.back() = 0;
+                    // scores.push_back(tmp);
+                    assert(scores.size() == output.size());
                 }
             } else {
                 maybe_close_formatted_block();
@@ -419,45 +406,40 @@ class IdentifyFormattedBlocks {
     }
     void maybe_close_formatted_block(bool at_end = false) {
         if (!in_formatted_block) return;
+        if (debug) cerr << "maybe close block" << endl;
         consecutive_high_scores = 0;
         in_formatted_block = false;
         string indent = "!!";
-        for (size_t i = lines.size(); i > 0; --i) {
+        assert(output.size());
+        assert(output.size() == scores.size());
+        for (size_t i = output.size() - 1; i > 0; --i) {
             if (scores[i] >= threshold) {
-                // if (at_end) cout << "at_end ";
-                // cout << "last block " << lines[i] << endl;
-                indent = get_indentation(lines[i]);
+                indent = get_indentation(output[i]);
                 break;
             }
         }
         output.push_back(indent + "#             fmt: on");
-        // cout << "block closed" << endl;
+        if (debug) cerr << "block closed" << endl;
     }
 };
 
 PYBIND11_MODULE(_detect_formatted_blocks, m) {
-    m.doc() =
-        "Identifies and marks well-formatted code blocks with fmt: off/on "
-        "markers";
+    m.doc() = "Identifies and marks well-formatted code blocks with fmt: off/on "
+              "markers";
 
     py::class_<IdentifyFormattedBlocks>(m, "IdentifyFormattedBlocks")
         .def(py::init<>(), "Default constructor which initializes the "
                            "substitution matrix.")
-        .def("set_substitution_matrix",
-             &IdentifyFormattedBlocks::set_substitution_matrix, py::arg("i"),
-             py::arg("j"), py::arg("val"),
+        .def("set_substitution_matrix", &IdentifyFormattedBlocks::set_substitution_matrix,
+             py::arg("i"), py::arg("j"), py::arg("val"),
              "Set a value in the substitution matrix at indices (i, j).")
-        .def("compute_similarity_score",
-             &IdentifyFormattedBlocks::compute_similarity_score,
-             py::arg("line1"), py::arg("line2"),
-             "Compute similarity score between two lines")
-        .def("mark_formtted_blocks",
-             &IdentifyFormattedBlocks::mark_formtted_blocks, py::arg("code"),
-             py::arg("threshold") = 0.7f,
+        .def("compute_similarity_score", &IdentifyFormattedBlocks::compute_similarity_score,
+             py::arg("line1"), py::arg("line2"), "Compute similarity score between two lines")
+        .def("mark_formtted_blocks", &IdentifyFormattedBlocks::mark_formtted_blocks,
+             py::arg("code"), py::arg("threshold") = 0.7f,
              "Process the input code and mark formatted blocks based on a "
              "similarity threshold.")
-        .def("unmark", &IdentifyFormattedBlocks::unmark, py::arg("code"),
-             "remove marks.");
+        .def("unmark", &IdentifyFormattedBlocks::unmark, py::arg("code"), "remove marks.");
 
     py::enum_<CharGroup>(m, "CharGroup")
         .value("UPPERCASE", UPPERCASE)
