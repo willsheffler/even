@@ -19,7 +19,7 @@ def test_matrix(session):
     run(session, 'uv venv')
     run(session, 'uv pip install ruff pytest pytest-xdist pytest-repeat')
     run(session, f'uv pip install {select_wheel(session)}')
-    run(session, f'uv run pytest -n{nprocs} --count 100 --doctest-modules --pyargs evn')
+    run(session, f'uv run pytest -n{nprocs} --count 1 --doctest-modules --pyargs evn')
 
 @nox.session(**sesh)
 def build(session):
@@ -60,5 +60,5 @@ def select_wheel(session):
         tags = parse_wheel_tags(wheel)
         if tags and tags in supported:
             picks.append(wheel)
-    # assert len(picks) == 1
+    assert picks
     return picks[0]

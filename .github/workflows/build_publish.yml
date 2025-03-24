@@ -58,12 +58,8 @@ jobs:
 
       - name: Test wheels
         run: |
-          echo "Testing wheels"
-          echo $(pwd)
-          uv venv
-          uv pip install nox
-          uv pip install --no-index --find-links=wheelhouse evn[dev]
-          uv run nox -s test_matrix
+          echo "Testing wheels with nox"
+          uv tool run nox
 
       - uses: actions/upload-artifact@v4
         with:
