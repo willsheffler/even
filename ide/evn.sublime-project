@@ -29,7 +29,7 @@
     [
         {
             "name": "pytest file",
-            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && PYTHONPATH=. \\$PYTEST evn/tests/*.py) 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && for i in {1..1}; do PYTHONPATH=. \\$PYTEST evn/tests/test_*.py; done) 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
 
