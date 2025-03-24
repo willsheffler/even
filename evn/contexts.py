@@ -48,14 +48,6 @@ with capture_stdio() as captured:
 print("Captured text:", captured.getvalue())
 ```
 
-### **Set a Temporary Random Seed**
-```python
-import numpy as np
-with temporary_random_seed(42):
-    print(np.random.rand(3))
-# Outside the context, the previous random state is restored.
-```
-
 ### **Capture Assertion Errors**
 ```python
 with capture_asserts() as errors:
@@ -72,7 +64,6 @@ with optional_imports():
 
 import atexit
 import io
-import numpy as np
 import os
 import sys
 import traceback
@@ -128,18 +119,6 @@ def trace_prints():
     tp = TracePrints()
     with redirect(stdout=tp):
         yield tp
-
-@contextlib.contextmanager
-def np_printopts(**kw):
-    npopt = np.get_printoptions()
-    try:
-        np.set_printoptions(**kw)
-        yield None
-    finally:
-        np.set_printoptions(**{k: npopt[k] for k in kw})
-
-def np_compact(precision=4, suppress=True, **kw):
-    return np_printopts(precision=precision, suppress=suppress, **kw)
 
 @contextlib.contextmanager
 def catch_em_all():
@@ -210,26 +189,6 @@ def capture_stdio():
         finally:
             out.seek(0)
             err.seek(0)
-
-@contextlib.contextmanager
-def temporary_random_seed(seed=None):
-    """
-    Temporarily set a numpy random seed.
-
-    Parameters:
-        seed (int, optional): The seed to set.
-
-    Yields:
-        None
-    """
-    randstate = np.random.get_state()
-    if seed is not None:
-        np.random.seed(seed)
-    try:
-        yield None
-    finally:
-        if seed is not None:
-            np.random.set_state(randstate)
 
 @contextlib.contextmanager
 def capture_asserts():
