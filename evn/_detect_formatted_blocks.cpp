@@ -343,12 +343,8 @@ class IdentifyFormattedBlocks {
         in_formatted_block = false;
     }
     string finish_code() {
-        // Join lines back into a string
         ostringstream result;
-        for (size_t i = 0; i < output.size(); i++) {
-            result << output[i];
-            if (i < output.size() - 1) result << "\n";
-        }
+        for (const string &line : output) { result << line << endl; }
         return result.str();
     }
 
@@ -358,7 +354,6 @@ class IdentifyFormattedBlocks {
         if (thresh > 0) threshold = thresh;
         if (lines.empty()) return code;
         output.push_back(lines[0]);
-        scores.push_back(0);
 
         consecutive_high_scores = 0;
         for (size_t i = 1; i < lines.size(); i++) {
@@ -366,7 +361,6 @@ class IdentifyFormattedBlocks {
                 if (debug) cerr << "multiline " << lines[i] << endl;
                 maybe_close_formatted_block();
                 output.push_back(lines[i]);
-                scores.push_back(0.0f);
                 continue;
             }
             string i_indent = get_indentation(lines[i]);
@@ -377,9 +371,6 @@ class IdentifyFormattedBlocks {
                 output.push_back(i_indent + "#             fmt: off");
                 output.push_back(lines[i]);
                 output.push_back(i_indent + "#             fmt: on");
-                scores.push_back(0.0f);
-                scores.push_back(0.0f);
-                scores.push_back(0.0f);
                 continue;
             }
             scores.push_back(compute_similarity_score(lines[i - 1], lines[i]));
@@ -388,16 +379,14 @@ class IdentifyFormattedBlocks {
                 consecutive_high_scores++;
                 if (consecutive_high_scores >= 1 && !in_formatted_block) {
                     in_formatted_block = true;
+                    string tmp = output.back();
                     output.back() = i_indent + "#             fmt: off";
-                    output.push_back(lines[i - 1]);
-                    // auto tmp = scores.back();
-                    // scores.back() = 0;
-                    // scores.push_back(tmp);
-                    assert(scores.size() == output.size());
+                    output.push_back(tmp);
+                    output.push_back(lines[i]);
+                    continue;
                 }
             } else {
                 maybe_close_formatted_block();
-                // cout << "noblk " << lines[i] << endl;
             }
             output.push_back(lines[i]);
         }
@@ -411,9 +400,8 @@ class IdentifyFormattedBlocks {
         in_formatted_block = false;
         string indent = "!!";
         assert(output.size());
-        assert(output.size() == scores.size());
         for (size_t i = output.size() - 1; i > 0; --i) {
-            if (scores[i] >= threshold) {
+            if (output[i].find("#             fmt:") == string::npos) {
                 indent = get_indentation(output[i]);
                 break;
             }

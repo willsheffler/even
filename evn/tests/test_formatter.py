@@ -72,7 +72,7 @@ def test_ruff_formatting(testcase):
     # print('***************************************')
     # # print("\n".join(diff))
     # print('\n'.join(difflib.ndiff(expected.splitlines(), formatted.splitlines())))
-    # # print(ipd.dev.diff(expected, formatted))
+    # # print(TEST.dev.diff(expected, formatted))
     # print('***************************************')
     assert formatted.strip() == expected.strip(), err
 

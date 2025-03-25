@@ -29,46 +29,46 @@
     [
         {
             "name": "pytest file",
-            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && for i in {1..1}; do PYTHONPATH=. \\$PYTEST -s evn/tests/test_formatter.py; done) 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && PYTHONPATH=. \\$PYTEST -sx evn/tests) 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
 
-        },
-        {
-            "name": "install and pytest file",
-            "shell_cmd": "cd $folder; (\\$PIP uninstall -y evn && \\$PIP install .[dev] && \\$PYTHON -m pytest $file) 2>&1 | tee $folder/ide/sublime_build.log",
-            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-            "file_regex": "^\\s*(.+?):(\\d+):(\\d+): error:"
-        },
-        {
-            "name": "nox",
-            "shell_cmd": "cd $folder; nox 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-        },
-        {
-            "name": "nox files",
-            "shell_cmd": "cd $folder; uv pip install pip pytest pytest-xdist numpy; uv pip install --no-index --find-links=wheelhouse evn[dev]; uv run pytest $file 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-        },
-        {
-            "name": "tmp build",
-            "shell_cmd": "(cd /tmp; mamba activate wcpp; pip uninstall -y evn; pip install ~/evn; python -mpytest --pyargs evn) 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-        },
-        {
-            "name": "uv run pytest",
-            "shell_cmd": "mkdir -p /tmp/evn; cd /tmp/evn; uv pip install --upgrade /home/sheffler/evn; uv run pytest /home/sheffler/evn 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-        },
-        {
-            "name": "pytest ",
-            "shell_cmd": "cd $folder; \\$PYTHON -m pytest evn/tests/align/test_line_align.py 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-        },
-        {
-            "name": "ipd runtestfile",
-            "shell_cmd": "cd $folder; PYTHONPATH=. ipd.ools.run_tests_on_file evn $file 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
         }
+        // {
+        //     "name": "install and pytest file",
+        //     "shell_cmd": "cd $folder; (\\$PIP uninstall -y evn && \\$PIP install .[dev] && \\$PYTHON -m pytest $file) 2>&1 | tee $folder/ide/sublime_build.log",
+        //     // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        //     "file_regex": "^\\s*(.+?):(\\d+):(\\d+): error:"
+        // },
+        // {
+        //     "name": "nox",
+        //     "shell_cmd": "cd $folder; nox 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        // },
+        // {
+        //     "name": "nox files",
+        //     "shell_cmd": "cd $folder; uv pip install pip pytest pytest-xdist numpy; uv pip install --no-index --find-links=wheelhouse evn[dev]; uv run pytest $file 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        // },
+        // {
+        //     "name": "tmp build",
+        //     "shell_cmd": "(cd /tmp; mamba activate wcpp; pip uninstall -y evn; pip install ~/evn; python -mpytest --pyargs evn) 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        // },
+        // {
+        //     "name": "uv run pytest",
+        //     "shell_cmd": "mkdir -p /tmp/evn; cd /tmp/evn; uv pip install --upgrade /home/sheffler/evn; uv run pytest /home/sheffler/evn 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        // },
+        // {
+        //     "name": "pytest ",
+        //     "shell_cmd": "cd $folder; \\$PYTHON -m pytest evn/tests/align/test_line_align.py 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        // },
+        // {
+        //     "name": "ipd runtestfile",
+        //     "shell_cmd": "cd $folder; PYTHONPATH=. ipd.ools.run_tests_on_file evn $file 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+        // }
     ]
 }

@@ -2,9 +2,7 @@ import pytest
 import evn
 
 def main():
-    # print(evn.OTHER)
-    obj = evn.IdentifyFormattedBlocks()
-    print(obj)
+    pass
 
 @pytest.fixture
 def ifb():
@@ -12,14 +10,14 @@ def ifb():
 
 def test_strange_cases(ifb):
     assert ifb.mark_formtted_blocks('', threshold=0.99) == ''
-    assert ifb.mark_formtted_blocks('\n', threshold=0.99) == ''
-    assert ifb.mark_formtted_blocks('\n\n', threshold=0.99) == '\n'
+    assert ifb.mark_formtted_blocks('\n', threshold=0.99) == '\n'
+    assert ifb.mark_formtted_blocks('\n\n', threshold=0.99) == '\n\n'
     assert ifb.mark_formtted_blocks('========', threshold=0.99)
     # assert ifb.mark_formtted_blocks('========\n========', threshold=0.99)
     # assert ifb.mark_formtted_blocks('========\n========\n', threshold=0.99)
     assert ifb.unmark('') == ''
-    assert ifb.unmark('\n') == ''
-    assert ifb.unmark('\n\n') == ''
+    assert ifb.unmark('\n') == '\n'
+    assert ifb.unmark('\n\n') == '\n'
     assert ifb.unmark('========')
     assert ifb.unmark('========\n========')
     assert ifb.unmark('========\n========\n')
@@ -34,13 +32,13 @@ a
 b
 #             fmt: on
 c
-    """
+"""
     test2 = """q
 z
 a
 b
 c
-    """
+"""
     assert ifb.unmark(test) == test2
 
 def test_mark_formtted_blocks_no_change(ifb):
@@ -64,7 +62,7 @@ def test_whitespace(ifb):
     # Test that the function handles leading/trailing whitespace correctly.
     code = "    line one\n\n\n\n    line two"
     result = ifb.unmark(code)
-    assert len(result.split('\n')) == 3
+    assert len(result.split('\n')) == 4
 
 def test_inline_blocks_are_marked(ifb):
     # Test that inline blocks are marked correctly.
@@ -74,7 +72,7 @@ def test_inline_blocks_are_marked(ifb):
             class Banana: ...
     elif bar: baz
         else: qux
-    """
+"""
     result = ifb.mark_formtted_blocks(code, threshold=2)
     assert result == """
     #             fmt: off
@@ -92,7 +90,7 @@ def test_inline_blocks_are_marked(ifb):
         #             fmt: off
         else: qux
         #             fmt: on
-    """
+"""
 
 def test_inline_blocks_are_marked2(ifb):
     # Test that inline blocks are marked correctly.
@@ -108,7 +106,7 @@ def test_inline_blocks_are_marked2(ifb):
     elif bar: baz
         else: qux
     aaaa
-    """
+"""
     result = ifb.mark_formtted_blocks(code, threshold=2)
     assert result == """
     print('foo')
@@ -132,7 +130,7 @@ def test_inline_blocks_are_marked2(ifb):
         else: qux
         #             fmt: on
     aaaa
-    """
+"""
 
 def test_multiline_is_ignored(ifb):
     # Test that inline blocks are marked correctly.
@@ -140,7 +138,7 @@ def test_multiline_is_ignored(ifb):
     if a: return b \\
     else: return c
     for a in b: c
-    """
+"""
     result = ifb.mark_formtted_blocks(code, threshold=4)
     assert result == """
     if a: return b \\
@@ -148,7 +146,7 @@ def test_multiline_is_ignored(ifb):
     #             fmt: off
     for a in b: c
     #             fmt: on
-    """
+"""
 
 if __name__ == "__main__":
     main()
