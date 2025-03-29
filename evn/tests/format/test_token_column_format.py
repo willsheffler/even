@@ -263,5 +263,3 @@ def test_reformat_lines_with_mixed_indentation(tokenizer):
     assert output[3] == ""
     assert output[4] == "  a=1"
 
-if __name__ == '__main__':
-    main()

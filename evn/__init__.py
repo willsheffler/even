@@ -1,6 +1,8 @@
-from evn import contexts as contexts
-from evn._detect_formatted_blocks import *
-from evn._token_column_format     import *
-from evn.formatter                import *
-from evn.filter_python_output     import *
-from evn.contexts                 import *
+from pathlib import Path
+coderoot = Path(__file__).parent.absolute()
+projroot = coderoot.parent
+from evn import *
+from evn.format import *
+from evn.dev import *
+from evn.tool import *
+

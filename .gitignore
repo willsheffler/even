@@ -4,12 +4,7 @@ __pycache__
 *.egg-info
 *.egg
 *.pyc
-evn/.ninja_deps
-evn/.ninja_log
-evn/CMakeCache.txt
-evn/CMakeFiles
-evn/build.ninja
-evn/cmake_install.cmake
+evn/_build
 __pycache__
 # Prerequisites
 *.d
@@ -43,3 +38,7 @@ __pycache__
 *.exe
 *.out
 *.app
+
+/.doit.db
+/.doit.db.db
+/_build

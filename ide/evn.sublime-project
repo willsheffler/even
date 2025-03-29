@@ -17,9 +17,9 @@
         },
         "project_environment": {
             "env": {
-                "PYTHON": "/home/sheffler/sw/MambaForge/envs/ipd/bin/python",
-                "PYTEST": "/home/sheffler/sw/MambaForge/envs/ipd/bin/pytest",
-                "PIP": "/home/sheffler/sw/MambaForge/envs/ipd/bin/pip",
+                "PYTHON": "/home/sheffler/sw/MambaForge/envs/evn/bin/python",
+                "PYTEST": "/home/sheffler/sw/MambaForge/envs/evn/bin/pytest",
+                "PIP": "/home/sheffler/sw/MambaForge/envs/evn/bin/pip",
                 // "PYTHON": "/home/sheffler/sw/MambaForge/envs/wu/bin/python",
                 "QT_QPA_PLATFORM": "xcb"
             }
@@ -28,19 +28,34 @@
     "build_systems":
     [
         {
-            "name": "test filter",
-            "shell_cmd": "cd $folder/evn; evn --filter boilerplate ~/rfd/sublime_build.log 2>&1 | tee $folder/ide/sublime_build.log",
+            "name": "pytest",
+            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTEST -sx 2>&1 | tee $folder/ide/sublime_build.log",
+            "file_regex": "^E?\\s*File \"(...*?)\", line ([0-9]*)"
+            // "file_regex": "^(.+\\.py):([0-9]+): "
+
+        },
+        {
+            "name": "run file",
+            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTHON $file 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
 
         },
         {
-            "name": "pytest file",
-            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && PYTHONPATH=. \\$PYTEST -sx evn/tests<) 2>&1 | tee $folder/ide/sublime_build.log",
+            "name": "doit",
+            "shell_cmd": "cd $folder; doit 2>&1 | tee $folder/ide/sublime_build.log; evn -i -f boilerplate $folder/ide/sublime_build.log",
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^(.+\\.py):([0-9]+): "
+
+        },
+        {
+            "name": "test filter",
+            "shell_cmd": "cd $folder/evn; evn --filter boilerplate ~/rfd/sublime_build.log 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
 
         }
+
         // {
         //     "name": "install and pytest file",
         //     "shell_cmd": "cd $folder; (\\$PIP uninstall -y evn && \\$PIP install .[dev] && \\$PYTHON -m pytest $file) 2>&1 | tee $folder/ide/sublime_build.log",

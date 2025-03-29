@@ -3,8 +3,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Optional
 from dataclasses import dataclass, field
-
-import evn
+from evn.format import IdentifyFormattedBlocks, PythonLineTokenizer
 
 @dataclass
 class FormatHistory:
@@ -42,8 +41,8 @@ class CodeFormatter:
     """Formats Python files using a configurable pipeline of FormatStep actions."""
     actions: list[FormatStep]
     history: FormatHistory = field(default_factory=FormatHistory)
-    cpp_mark: evn.IdentifyFormattedBlocks = field(default_factory=evn.IdentifyFormattedBlocks)
-    cpp_aln: evn.PythonLineTokenizer = field(default_factory=evn.PythonLineTokenizer)
+    cpp_mark: IdentifyFormattedBlocks = field(default_factory=IdentifyFormattedBlocks)
+    cpp_aln: PythonLineTokenizer = field(default_factory=PythonLineTokenizer)
 
     def __post_init__(self):
         for action in self.actions:

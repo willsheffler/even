@@ -7,17 +7,28 @@ name = 'evn'
 version = '0.1.0'
 requires-python = '>=3.9'
 dependencies = [
-    'ruff'
+    'ruff',
+    'assertpy',
 ]
 
 [project.optional-dependencies]
 dev = [
     'pytest',
     'pytest-xdist',
+    'pytest-benchmark',
+    'pytest-cov',
+    'pytest-sugar',
 ]
 
 [project.scripts]
-evn = 'evn.__main__:main'
+evn = 'evn.tool.__main__:main'
+
+[tool.pytest.ini_options]
+minversion = 6.0
+addopts = ''
+pythonpath = ['.']
+testpaths = ['evn/tests']
+
 
 [tool.ruff]
 lint.ignore = [
