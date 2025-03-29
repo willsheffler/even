@@ -1,12 +1,12 @@
 import difflib
 import pytest
-from evn import PythonLineTokenizer
+import evn
 
 # --- Tokenization Tests ---
 
 @pytest.fixture
 def tokenizer():
-    return PythonLineTokenizer()
+    return evn.PythonLineTokenizer()
 
 def helper_test_reformat_lines(tokenizer, lines, expected):
     output = tokenizer.reformat_lines(lines, add_fmt_tag=True)
@@ -19,37 +19,37 @@ def helper_test_reformat_lines(tokenizer, lines, expected):
 
 def test_tokenize_basic(tokenizer):
     code_line = "a = b + c"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ["a", "=", "b", "+", "c"]
     assert tokens == expected
 
 def test_tokenize_with_comment(tokenizer):
     code_line = "x = 42  # this is a comment"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ["x", "=", "42", "# this is a comment"]
     assert tokens == expected
 
 def test_tokenize_string_literal(tokenizer):
     code_line = "print('Hello, \\'World\\'!')"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ["print", "(", "'Hello, \\'World\\'!'", ")"]
     assert tokens == expected
 
 def test_tokenize_fstring(tokenizer):
     code_line = 'f"Hello, {name}!"'
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ['f"Hello, {name}!"']
     assert tokens == expected
 
 def test_tokenize_triple_quote_string(tokenizer):
     code_line = "s = '''string literal'''"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ["s", "=", "'''string literal'''"]
     assert tokens == expected
 
 def test_tokenize_lambda_expression(tokenizer):
     code_line = "lambda x, y=42: (x + y) if x > y else (x - y)"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = [
         "lambda", "x", ",", "y", "=", "42", ":", "(", "x", "+", "y", ")", "if", "x", ">", "y", "else", "(",
         "x", "-", "y", ")"
@@ -59,18 +59,18 @@ def test_tokenize_lambda_expression(tokenizer):
 
 def test_tokenize_multi_char_operators(tokenizer):
     code_line = "a ** b // c != d -> e"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ["a", "**", "b", "//", "c", "!=", "d", "->", "e"]
     assert tokens == expected
 
 def test_tokenize_while(tokenizer):
     code_line = "while if this is True: break out # comment"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     expected = ["while", "if", "this", "is", "True", ":", "break", "out", "# comment"]
     assert tokens == expected
-    assert not tokenizer.is_oneline_statement(tokens[:-3])
-    assert tokenizer.is_oneline_statement(tokens[:-2])
-    assert tokenizer.is_oneline_statement(tokens)
+    assert not evn.is_oneline_statement(tokens[:-3])
+    assert evn.is_oneline_statement(tokens[:-2])
+    assert evn.is_oneline_statement(tokens)
 
 # --- Join Tokens (Black-like formatting) Tests ---
 
@@ -95,7 +95,7 @@ def test_join_tokens_with_commas_and_colons(tokenizer):
 
 def test_join_tokens_complex_expression(tokenizer):
     code_line = "def func(a, b=2): return a**b + (a - b)*3.14"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     joined = tokenizer.join_tokens(tokens)
     expected = "def func(a, b=2): return a ** b + (a - b) * 3.14"
     assert joined == expected
@@ -108,14 +108,14 @@ def test_join_tokens_operator_spacing(tokenizer):
 
 def test_join_tokens_nested_parens(tokenizer):
     code_line = "print((a+b)*(c-d))"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     joined = tokenizer.join_tokens(tokens)
     expected = "print((a+b) * (c-d))"
     assert joined == expected
 
 def test_join_tokens_mixed_syntax(tokenizer):
     code_line = "def add(a,b):return a+b"
-    tokens = tokenizer.tokenize(code_line)
+    tokens = evn.tokenize(code_line)
     joined = tokenizer.join_tokens(tokens)
     expected = "def add(a, b): return a + b"
     assert joined == expected
@@ -125,30 +125,30 @@ def test_join_tokens_mixed_syntax(tokenizer):
 def test_tokens_match_wildcards(tokenizer):
     code1 = "def compute(x): return 100 + x"
     code2 = "def compute(y): return 200 + y"
-    tokens1 = tokenizer.tokenize(code1)
-    tokens2 = tokenizer.tokenize(code2)
-    assert tokenizer.tokens_match(tokens1, tokens2)
+    tokens1 = evn.tokenize(code1)
+    tokens2 = evn.tokenize(code2)
+    assert evn.tokens_match(tokens1, tokens2)
 
 def test_tokens_match_fail_due_to_operator(tokenizer):
     code1 = "def compute(x): return 100 * x"
     code2 = "def compute(x): return 100 / x"
-    tokens1 = tokenizer.tokenize(code1)
-    tokens2 = tokenizer.tokenize(code2)
-    assert not tokenizer.tokens_match(tokens1, tokens2)
+    tokens1 = evn.tokenize(code1)
+    tokens2 = evn.tokenize(code2)
+    assert not evn.tokens_match(tokens1, tokens2)
 
 def test_tokens_match_keyword_mismatch(tokenizer):
     code1 = "if x > 0: print(x)"
     code2 = "while x > 0: print(x)"
-    tokens1 = tokenizer.tokenize(code1)
-    tokens2 = tokenizer.tokenize(code2)
-    assert not tokenizer.tokens_match(tokens1, tokens2)
+    tokens1 = evn.tokenize(code1)
+    tokens2 = evn.tokenize(code2)
+    assert not evn.tokens_match(tokens1, tokens2)
 
 def test_tokens_match_identifier_vs_string(tokenizer):
     code1 = "def f(x): return 'value'"
     code2 = "def f('x'): return x"
-    tokens1 = tokenizer.tokenize(code1)
-    tokens2 = tokenizer.tokenize(code2)
-    assert not tokenizer.tokens_match(tokens1, tokens2)
+    tokens1 = evn.tokenize(code1)
+    tokens2 = evn.tokenize(code2)
+    assert not evn.tokens_match(tokens1, tokens2)
 
 def test_no_blocks(tokenizer):
     # All lines have different token patterns; output should match input exactly.

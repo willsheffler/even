@@ -3,7 +3,7 @@ Standard:        Cpp11
 IndentWidth:     4
 TabWidth:        4
 UseTab:          Never
-ColumnLimit: 100
+ColumnLimit: 90
 AllowShortIfStatementsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 AlignConsecutiveShortCaseStatements:

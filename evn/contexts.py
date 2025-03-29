@@ -176,6 +176,13 @@ def cd(path):
         os.chdir(oldpath)
 
 @contextlib.contextmanager
+def just_stdout():
+    try:
+        yield sys.stdout
+    finally:
+        pass
+
+@contextlib.contextmanager
 def capture_stdio():
     """
     Capture standard output and error.

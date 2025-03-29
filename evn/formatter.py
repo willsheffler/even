@@ -1,7 +1,6 @@
 import re
 import subprocess
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
 
@@ -61,12 +60,12 @@ class CodeFormatter:
         for filename in self.history.buffers:
             code = self.history.get_original(filename)
             if debug: print('*************************************')
-            if debug: print(code,'\n************ orig ****************')
+            if debug: print(code, '\n************ orig ****************')
             for action in self.actions:
                 if debug: print(action.__class__.__name__, flush=True)
                 if dryrun: print(f"Dry run: {action.__class__.__name__} on {filename}")
                 else: code = action.apply_formatting(code, self.history)
-                if debug: print(code,f'\n************ {action.__class__.__name__} ****************')
+                if debug: print(code, f'\n************ {action.__class__.__name__} ****************')
             self.history.update(filename, code)
 
         return self.history
@@ -118,34 +117,35 @@ class RemoveExtraBlankLines(FormatStep):
     def apply_formatting(self, code: str, history=None) -> str:
         return re.sub(re_two_blank_lines, "\n\n", code).strip()
 
-def format_files(root_path: Path, dryrun: bool = False):
-    """Reads files, runs CodeFormatter, and writes formatted content back."""
-    file_map = {}
+# def format_files(root_path: Path, dryrun: bool = False):
+#     """Reads files, runs CodeFormatter, and writes formatted content back."""
+#     file_map = {}
 
-    # Read all .py files
-    if root_path.is_file():
-        file_map[str(root_path)] = root_path.read_text(encoding="utf-8")
-    else:
-        for file in root_path.rglob("*.py"):
-            file_map[str(file)] = file.read_text(encoding="utf-8")
+#     # Read all .py files
+#     if root_path.is_file():
+#         file_map[str(root_path)] = root_path.read_text(encoding="utf-8")
+#     else:
+#         for file in root_path.rglob("*.py"):
+#             file_map[str(file)] = file.read_text(encoding="utf-8")
 
-    # Format files
+#     # Format files
+#     formatter = CodeFormatter([
+#         MarkHandFormattedBlocksCpp(),
+#         RuffFormat(),
+#         UnmarkCpp(),
+#     ])
+#     formatted_history = formatter.run(file_map, dryrun=dryrun)
+
+#     # Write back results
+#     for filename, history in formatted_history.buffers.items():
+#         if history["original"] != history["formatted"]:
+#             Path(filename).write_text(history["formatted"], encoding="utf-8")
+#             print(f"Formatted: {filename}")
+
+def format_buffer(buf, dryrun: bool = False):
     formatter = CodeFormatter([
-        MarkHandFormattedBlocksCpp(),
-        RuffFormat(),
-        UnmarkCpp(),
-    ])
-    formatted_history = formatter.run(file_map, dryrun=dryrun)
-
-    # Write back results
-    for filename, history in formatted_history.buffers.items():
-        if history["original"] != history["formatted"]:
-            Path(filename).write_text(history["formatted"], encoding="utf-8")
-            print(f"Formatted: {filename}")
-
-def format_buffer(buf):
-    formatter = CodeFormatter([
-        MarkHandFormattedBlocksCpp(),
+        # MarkHandFormattedBlocksCpp(),
+        AlignTokensCpp(),
         RuffFormat(),
         UnmarkCpp(),
     ])

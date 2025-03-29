@@ -1,22 +1,4 @@
-// format_identifier.cpp
-#include <algorithm>
-#include <cctype>
-#include <iostream>
-#include <optional>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-// #include <ranges>
-#include <regex>
-#include <sstream>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <utility>
-#include <vector>
-
-namespace py = pybind11;
-using namespace std;
-bool debug = false;
+#include "_common.hpp"
 
 // Character group indices for substitution matrix
 enum CharGroup {
@@ -164,114 +146,6 @@ array<array<float, NUM_GROUPS>, NUM_GROUPS> create_default_submatrix() {
     return matrix;
 }
 
-// Returns the index of the first non-whitespace character from the end of the
-// string or std::string::npos if the string contains only whitespace.
-size_t find_last_non_whitespace(const std::string &str) {
-    for (std::size_t i = str.size(); i > 0; --i) {
-        if (!std::isspace(static_cast<unsigned char>(str[i - 1]))) { return i - 1; }
-    }
-    return std::string::npos;
-}
-
-bool is_multiline(string const &line) {
-    size_t i = find_last_non_whitespace(line);
-    if (i == string::npos) return false; // Empty line
-    return line[i] == '\\';
-}
-
-bool is_oneline_statement(string const &line) {
-    if (line.empty()) { return false; }
-    string trimmed = line;
-    size_t firstNonSpace = trimmed.find_first_not_of(" \t");
-    if (firstNonSpace == string::npos) return false; // Empty line
-    trimmed = trimmed.substr(firstNonSpace);
-    if (trimmed[0] == '#') { return false; }
-    const vector<string> keywords = {"if ", "elif ", "else:", "for ", "def ", "class "};
-
-    bool foundKeyword = false;
-    string keywordFound;
-    for (const auto &keyword : keywords) {
-        if (trimmed.compare(0, keyword.length(), keyword) == 0) {
-            foundKeyword = true;
-            keywordFound = keyword;
-            break;
-        }
-    }
-    if (!foundKeyword) { return false; }
-
-    // Now we need to find the colon that ends the statement header
-    size_t colonPos = 0;
-    bool inString = false;
-    char stringDelimiter = 0;
-    bool escaped = false;
-    int parenLevel = 0;
-
-    // For else:, we already know the colon position
-    if (keywordFound == "else:") {
-        colonPos = firstNonSpace + 4; // "else" length
-    } else {
-        // For other keywords, we need to find the colon
-        for (size_t i = 0; i < trimmed.length(); i++) {
-            char c = trimmed[i];
-
-            // Handle string delimiters
-            if ((c == '"' || c == '\'') && !escaped) {
-                if (!inString) {
-                    inString = true;
-                    stringDelimiter = c;
-                } else if (c == stringDelimiter) {
-                    inString = false;
-                }
-            }
-
-            // Handle escaping
-            if (c == '\\' && !escaped) {
-                escaped = true;
-                continue;
-            } else {
-                escaped = false;
-            }
-
-            // Track parentheses level (ignore if in string)
-            if (!inString) {
-                if (c == '(' || c == '[' || c == '{') {
-                    parenLevel++;
-                } else if (c == ')' || c == ']' || c == '}') {
-                    parenLevel--;
-                } else if (c == ':' && parenLevel == 0) {
-                    colonPos = firstNonSpace + i;
-                    break;
-                }
-            }
-        }
-    }
-
-    // If we couldn't find a proper colon, it's not a valid statement
-    if (colonPos == 0 || colonPos >= line.length() - 1) { return false; }
-
-    // Now check if there's an action after the colon
-    string afterColon = line.substr(colonPos + 1);
-    size_t actionStart = afterColon.find_first_not_of(" \t");
-
-    // If there's nothing after the colon or just a comment, it's not an inline
-    // action
-    if (actionStart == string::npos || afterColon[actionStart] == '#') { return false; }
-
-    return true;
-}
-
-// Get indentation level of a line
-string get_indentation(string const &line) {
-    auto nonWhitespace = line.find_first_not_of(" \t");
-    if (nonWhitespace == string::npos) { return ""; }
-    return line.substr(0, nonWhitespace);
-}
-
-bool is_whitespace(const std::string &str) {
-    return str.empty() ||
-           std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
-}
-
 class IdentifyFormattedBlocks {
   public:
     array<array<float, NUM_GROUPS>, NUM_GROUPS> sub_matrix;
@@ -285,7 +159,9 @@ class IdentifyFormattedBlocks {
         sub_matrix = create_default_submatrix();
     }
 
-    void set_substitution_matrix(CharGroup i, CharGroup j, float val) { sub_matrix[i][j] = val; }
+    void set_substitution_matrix(CharGroup i, CharGroup j, float val) {
+        sub_matrix[i][j] = val;
+    }
 
     // Compute similarity score between two lines
     float compute_similarity_score(string const &line1, string const &line2) {
@@ -311,11 +187,12 @@ class IdentifyFormattedBlocks {
         if (debug) cerr << "adject for len" << endl;
         float maxlen = static_cast<float>(max(line1.size(), line2.size()));
         alignmentScore = alignmentScore / sqrt(maxlen);
-        float lengthPenalty = 1.0f - (abs(static_cast<int>(len1) - static_cast<int>(len2)) /
-                                      static_cast<float>(max(len1, len2)));
+        float lengthPenalty =
+            1.0f - (abs(static_cast<int>(len1) - static_cast<int>(len2)) /
+                    static_cast<float>(max(len1, len2)));
         if (debug)
-            cerr << "alignmentScore " << alignmentScore << " lengthPenalty " << lengthPenalty
-                 << endl;
+            cerr << "alignmentScore " << alignmentScore << " lengthPenalty "
+                 << lengthPenalty << endl;
         return 0.7f * alignmentScore + 0.3f * lengthPenalty;
     }
 
@@ -325,7 +202,8 @@ class IdentifyFormattedBlocks {
 
         for (string const &line : lines) {
             if (line.find("#             fmt:") != string::npos) continue;
-            if (is_whitespace(line) && output.size() && is_whitespace(output.back())) continue;
+            if (is_whitespace(line) && output.size() && is_whitespace(output.back()))
+                continue;
             output.push_back(line);
         }
         ostringstream result;
@@ -364,7 +242,7 @@ class IdentifyFormattedBlocks {
                 continue;
             }
             string i_indent = get_indentation(lines[i]);
-            if (!in_formatted_block && is_oneline_statement(lines[i])) {
+            if (!in_formatted_block && is_oneline_statement_string(lines[i])) {
                 if (debug) cerr << "oneline " << lines[i] << endl;
                 maybe_close_formatted_block();
                 // cout << "single " << lines[i] << endl;
@@ -421,13 +299,15 @@ PYBIND11_MODULE(_detect_formatted_blocks, m) {
         .def("set_substitution_matrix", &IdentifyFormattedBlocks::set_substitution_matrix,
              py::arg("i"), py::arg("j"), py::arg("val"),
              "Set a value in the substitution matrix at indices (i, j).")
-        .def("compute_similarity_score", &IdentifyFormattedBlocks::compute_similarity_score,
-             py::arg("line1"), py::arg("line2"), "Compute similarity score between two lines")
+        .def("compute_similarity_score",
+             &IdentifyFormattedBlocks::compute_similarity_score, py::arg("line1"),
+             py::arg("line2"), "Compute similarity score between two lines")
         .def("mark_formtted_blocks", &IdentifyFormattedBlocks::mark_formtted_blocks,
              py::arg("code"), py::arg("threshold") = 0.7f,
              "Process the input code and mark formatted blocks based on a "
              "similarity threshold.")
-        .def("unmark", &IdentifyFormattedBlocks::unmark, py::arg("code"), "remove marks.");
+        .def("unmark", &IdentifyFormattedBlocks::unmark, py::arg("code"),
+             "remove marks.");
 
     py::enum_<CharGroup>(m, "CharGroup")
         .value("UPPERCASE", UPPERCASE)

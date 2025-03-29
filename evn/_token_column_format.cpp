@@ -1,24 +1,4 @@
-#include <algorithm>
-#include <cctype>
-#include <exception>
-#include <iostream>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <unordered_set>
-#include <vector>
-
-namespace py = pybind11;
-using namespace std;
-
-enum class TokenType {
-    Identifier,
-    String,
-    Numeric,
-    Exact // Keywords, punctuation, comments, etc.
-};
+#include "_common.hpp"
 
 // Helper struct to store per–line data.
 struct LineInfo {
@@ -29,14 +9,6 @@ struct LineInfo {
     vector<string> tokens;  // Tokenized content.
     vector<string> pattern; // Token pattern (wildcards)
 };
-
-string rstrip(const string &str) {
-    string trimmed_str = str;
-    auto it = find_if(trimmed_str.rbegin(), trimmed_str.rend(),
-                      [](unsigned char ch) { return !isspace(ch); });
-    trimmed_str.erase(it.base(), trimmed_str.end());
-    return trimmed_str;
-}
 
 class PythonLineTokenizer {
   public:
@@ -57,8 +29,7 @@ class PythonLineTokenizer {
     }
 
     // Process a vector of lines.
-    vector<string> reformat_lines(const vector<string> &lines,
-                                  bool add_fmt_tag = false,
+    vector<string> reformat_lines(const vector<string> &lines, bool add_fmt_tag = false,
                                   bool debug = false) {
         vector<LineInfo> infos = line_info(lines);
         vector<string> output;
@@ -86,109 +57,13 @@ class PythonLineTokenizer {
                         flush_block(block, output, add_fmt_tag, debug);
                     }
                 } catch (const out_of_range &e) {
-                    throw runtime_error("Error grouping lines: " +
-                                        string(e.what()));
+                    throw runtime_error("Error grouping lines: " + string(e.what()));
                 }
                 block.push_back(info);
             }
         }
         flush_block(block, output, add_fmt_tag, debug);
         return output;
-    }
-
-    // Tokenizes a single line of Python code.
-    vector<string> tokenize(const string &line) {
-        vector<string> tokens;
-        size_t i = 0;
-        while (i < line.size()) {
-            // Skip whitespace.
-            if (isspace(static_cast<unsigned char>(line.at(i)))) {
-                ++i;
-                continue;
-            }
-            // Handle comments: rest of the line is one token.
-            if (line.at(i) == '#') {
-                tokens.push_back(line.substr(i));
-                break;
-            }
-            // Check for an f-string literal.
-            if ((line.at(i) == 'f' || line.at(i) == 'F') &&
-                (i + 1 < line.size()) &&
-                (line.at(i + 1) == '\'' || line.at(i + 1) == '"')) {
-                tokens.push_back(parse_string_literal(line, i, true));
-                continue;
-            }
-            // Check for a normal string literal.
-            if (line.at(i) == '\'' || line.at(i) == '"') {
-                tokens.push_back(parse_string_literal(line, i, false));
-                continue;
-            }
-            // Check for an identifier or keyword.
-            if (isalpha(static_cast<unsigned char>(line.at(i))) ||
-                line.at(i) == '_') {
-                size_t start = i;
-                while (i < line.size() &&
-                       (isalnum(static_cast<unsigned char>(line.at(i))) ||
-                        line.at(i) == '_')) {
-                    ++i;
-                }
-                tokens.push_back(line.substr(start, i - start));
-                continue;
-            }
-            // Handle numeric literals in a basic way.
-            if (isdigit(static_cast<unsigned char>(line.at(i)))) {
-                size_t start = i;
-                while (i < line.size() &&
-                       (isdigit(static_cast<unsigned char>(line.at(i))) ||
-                        line.at(i) == '.' || line.at(i) == 'e' ||
-                        line.at(i) == 'E' || line.at(i) == '+' ||
-                        line.at(i) == '-')) {
-                    ++i;
-                }
-                tokens.push_back(line.substr(start, i - start));
-                continue;
-            }
-            // Check for multi-character punctuation/operators.
-            bool multi_matched = false;
-            static const vector<string> multi_tokens = {
-                "...", "==", "!=", "<=", ">=", "//", "**", "->", "+=",
-                "-=",  "*=", "/=", "%=", "&=", "|=", "^=", ">>", "<<"};
-            for (const auto &tok : multi_tokens) {
-                if (line.compare(i, tok.size(), tok) == 0) {
-                    tokens.push_back(tok);
-                    i += tok.size();
-                    multi_matched = true;
-                    break;
-                }
-            }
-            if (multi_matched) continue;
-            // Single-character punctuation.
-            try {
-                tokens.push_back(string(1, line.at(i)));
-            } catch (const out_of_range &e) {
-                throw runtime_error("Index error in tokenize at position " +
-                                    to_string(i));
-            }
-            ++i;
-        }
-        return tokens;
-    }
-
-    // Returns a token pattern for grouping.
-    vector<string> get_token_pattern(const vector<string> &tokens) {
-        vector<string> pattern;
-        for (const auto &tok : tokens) {
-            if (is_string_literal(tok))
-                pattern.push_back("STR");
-            else if (is_identifier(tok) && !is_keyword(tok))
-                pattern.push_back("ID");
-            else if (!tok.empty() &&
-                     isdigit(static_cast<unsigned char>(tok.at(0))))
-                pattern.push_back("NUM");
-            else
-                pattern.push_back(tok);
-        }
-        return pattern;
     }
 
     // Formats tokens by computing a delimiter for each token (except the
@@ -235,12 +110,10 @@ class PythonLineTokenizer {
         vector<string> formatted_tokens(tokens);
         if (!skip_formatting) formatted_tokens = format_tokens(tokens);
         if (!widths.empty() && widths.size() == formatted_tokens.size() &&
-            !justifications.empty() &&
-            justifications.size() == formatted_tokens.size()) {
+            !justifications.empty() && justifications.size() == formatted_tokens.size()) {
             for (size_t i = 0; i < formatted_tokens.size(); i++) {
                 if (widths.at(i) > 0) {
-                    int token_len =
-                        static_cast<int>(formatted_tokens.at(i).size());
+                    int token_len = static_cast<int>(formatted_tokens.at(i).size());
                     int padding = static_cast<int>(widths.at(i)) - token_len;
                     if (padding > 0) {
                         char just = justifications.at(i);
@@ -271,8 +144,7 @@ class PythonLineTokenizer {
             info.lineno = i;
             info.line = lines[i];
             size_t pos = info.line.find_first_not_of(" \t");
-            info.indent =
-                (pos == string::npos) ? info.line : info.line.substr(0, pos);
+            info.indent = (pos == string::npos) ? info.line : info.line.substr(0, pos);
             info.content = (pos == string::npos) ? "" : info.line.substr(pos);
             if (!info.content.empty()) {
                 info.tokens = tokenize(info.content);
@@ -283,19 +155,6 @@ class PythonLineTokenizer {
         return infos;
     }
 
-    // Compares two token vectors using wildcard rules.
-    bool tokens_match(const vector<string> &tokens1,
-                      const vector<string> &tokens2) {
-        if (tokens1.size() != tokens2.size()) return false;
-        for (size_t i = 0; i < tokens1.size(); i++) {
-            TokenType type1 = get_token_type(tokens1.at(i));
-            TokenType type2 = get_token_type(tokens2.at(i));
-            if (type1 != type2) return false;
-            if (type1 == TokenType::Exact && tokens1.at(i) != tokens2.at(i))
-                return false;
-        }
-        return true;
-    }
     // Flushes a block of LineInfo objects into output.
     void flush_block(vector<LineInfo> &block, vector<string> &output,
                      bool add_fmt_tag = false, bool debug = false) {
@@ -316,21 +175,19 @@ class PythonLineTokenizer {
             for (auto &tokens : token_lines)
                 formatted_lines.push_back(format_tokens(tokens));
             size_t nTokens = 0;
-            for (auto &tokens : formatted_lines)
-                nTokens = max(nTokens, tokens.size());
+            for (auto &tokens : formatted_lines) nTokens = max(nTokens, tokens.size());
             vector<int> max_width(nTokens, 0);
             for (auto &tokens : formatted_lines) {
                 for (size_t j = 0; j < tokens.size(); j++) {
-                    max_width.at(j) = max(
-                        max_width.at(j), static_cast<int>(tokens.at(j).size()));
+                    max_width.at(j) =
+                        max(max_width.at(j), static_cast<int>(tokens.at(j).size()));
                 }
             }
             vector<char> justifications(nTokens, 'L');
             if (add_fmt_tag)
                 output.push_back(block.at(0).indent + "#             fmt: off");
             for (auto &tokens : formatted_lines) {
-                string joined =
-                    join_tokens(tokens, max_width, justifications, true);
+                string joined = join_tokens(tokens, max_width, justifications, true);
                 output.push_back(block.at(0).indent + joined);
             }
             if (add_fmt_tag)
@@ -338,186 +195,41 @@ class PythonLineTokenizer {
         }
         block.clear();
     }
-
-    // Delimiter helper: returns the delimiter to insert before the current
-    // token.
-    string delimiter(size_t prev_index, size_t curr_index,
-                     const vector<string> &tokens, bool in_param_context,
-                     int depth) const {
-        const string &prev = tokens.at(prev_index);
-        const string &next = tokens.at(curr_index);
-        if (in_param_context && (prev == "=" || next == "=")) return "";
-        if (is_operator(prev) || is_operator(next)) {
-            if (depth > 1 &&
-                (prev == "+" || prev == "-" || next == "+" || next == "-"))
-                return "";
-            return " ";
-        }
-        if (is_opener(prev)) return "";
-        if (is_closer(next)) return "";
-        if (next == "," || next == ":" || next == ";") return "";
-        if (next == "(" && is_identifier_or_literal(prev) && !is_keyword(prev))
-            return "";
-        return " ";
-    }
-
-    // Parses a string literal from the given line starting at index i.
-    string parse_string_literal(const string &line, size_t &i,
-                                bool is_f_string) {
-        size_t start = i;
-        if (is_f_string) ++i; // skip the 'f' or 'F'
-        if (i >= line.size())
-            throw out_of_range("String literal start index out of range");
-        char quote = line.at(i);
-        bool triple = false;
-        if (i + 2 < line.size() && line.at(i) == line.at(i + 1) &&
-            line.at(i) == line.at(i + 2)) {
-            triple = true;
-            i += 3;
-        } else {
-            ++i;
-        }
-        while (i < line.size()) {
-            if (line.at(i) == '\\') {
-                i += 2;
-            } else if (triple) {
-                if (i + 2 < line.size() && line.at(i) == quote &&
-                    line.at(i + 1) == quote && line.at(i + 2) == quote) {
-                    i += 3;
-                    break;
-                } else {
-                    ++i;
-                }
-            } else {
-                if (line.at(i) == quote) {
-                    ++i;
-                    break;
-                } else {
-                    ++i;
-                }
-            }
-        }
-        return line.substr(start, i - start);
-    }
-
-    // Helper functions for token type checking.
-    bool is_string_literal(const string &token) const {
-        if (token.empty()) return false;
-        if (token.at(0) == '\'' || token.at(0) == '"') return true;
-        if (token.size() >= 2 && (token.at(0) == 'f' || token.at(0) == 'F') &&
-            (token.at(1) == '\'' || token.at(1) == '"'))
-            return true;
-        return false;
-    }
-
-    bool is_identifier(const string &token) const {
-        if (token.empty()) return false;
-        if (!isalpha(static_cast<unsigned char>(token.at(0))) &&
-            token.at(0) != '_')
-            return false;
-        for (size_t i = 1; i < token.size(); i++) {
-            if (!isalnum(static_cast<unsigned char>(token.at(i))) &&
-                token.at(i) != '_')
-                return false;
-        }
-        return true;
-    }
-
-    bool is_opener(const string &token) const {
-        return token == "(" || token == "[" || token == "{";
-    }
-
-    bool is_closer(const string &token) const {
-        return token == ")" || token == "]" || token == "}";
-    }
-
-    bool is_operator(const string &token) const {
-        static const unordered_set<string> operators = {
-            "+",  "-",  "*",  "/",  "%", "**", "//", "==", "!=",
-            "<",  ">",  "<=", ">=", "=", "->", "+=", "-=", "*=",
-            "/=", "%=", "&",  "|",  "^", ">>", "<<", "~"};
-        return operators.find(token) != operators.end();
-    }
-
-    bool is_keyword(const string &token) const {
-        static const unordered_set<string> python_keywords = {
-            "False",  "None",     "True",  "and",    "as",       "assert",
-            "async",  "await",    "break", "class",  "continue", "def",
-            "del",    "elif",     "else",  "except", "finally",  "for",
-            "from",   "global",   "if",    "import", "in",       "is",
-            "lambda", "nonlocal", "not",   "or",     "pass",     "raise",
-            "return", "try",      "while", "with",   "yield"};
-        return python_keywords.find(token) != python_keywords.end();
-    }
-
-    bool is_identifier_or_literal(const string &token) const {
-        TokenType t = get_token_type(token);
-        return (t == TokenType::Identifier || t == TokenType::String ||
-                t == TokenType::Numeric);
-    }
-
-    TokenType get_token_type(const string &token) const {
-        if (is_string_literal(token)) return TokenType::String;
-        if (is_identifier(token)) {
-            if (is_keyword(token)) return TokenType::Exact;
-            return TokenType::Identifier;
-        }
-        if (!token.empty() && isdigit(static_cast<unsigned char>(token.at(0))))
-            return TokenType::Numeric;
-        return TokenType::Exact;
-    }
-
-    bool is_oneline_statement(vector<string> const &tokens) {
-        if (tokens.empty()) return false;
-        static const vector<string> keywords = {"if",    "elif", "else", "for",
-                                                "while", "def",  "class"};
-        if (find(keywords.begin(), keywords.end(), tokens[0]) == keywords.end())
-            return false;
-        for (int i = 1; i < tokens.size(); ++i)
-            if (tokens[i] == ":") {
-                if (i == tokens.size() - 1) return false;
-                if (tokens[i + 1][0] == '#') return false;
-                return true;
-            }
-        return false;
-    }
 };
 
 PYBIND11_MODULE(_token_column_format, m) {
     m.doc() = "A module that wraps PythonLineTokenizer using pybind11";
     py::class_<PythonLineTokenizer>(m, "PythonLineTokenizer")
         .def(py::init<>())
-        .def("tokenize", &PythonLineTokenizer::tokenize,
-             "Tokenize a single line of Python code")
         .def("format_tokens", &PythonLineTokenizer::format_tokens,
              "Format tokens by prepending delimiters based on Black-like "
              "spacing heuristics")
         .def(
             "join_tokens",
             static_cast<string (PythonLineTokenizer::*)(
-                const vector<string> &, const vector<int> &,
-                const vector<char> &, bool)>(&PythonLineTokenizer::join_tokens),
+                const vector<string> &, const vector<int> &, const vector<char> &, bool)>(
+                &PythonLineTokenizer::join_tokens),
             py::arg("tokens"), py::arg("widths") = vector<int>(),
             py::arg("justifications") = vector<char>(),
             py::arg("skip_formatting") = false,
             "Join tokens into a valid Python code line using Black-like "
             "heuristics. If skip_formatting is true, assume tokens are already "
             "formatted.")
-        .def("tokens_match", &PythonLineTokenizer::tokens_match,
-             "Compare two token vectors using wildcards for identifiers, "
-             "strings, and numerics")
-        .def("is_oneline_statement", &PythonLineTokenizer::is_oneline_statement,
-             py::arg("tokens"), "Check if a line is an oneline statement")
-        .def("reformat_buffer", &PythonLineTokenizer::reformat_buffer,
-             py::arg("code"), py::arg("add_fmt_tag") = false,
-             py::arg("debug") = false,
+        .def("reformat_buffer", &PythonLineTokenizer::reformat_buffer, py::arg("code"),
+             py::arg("add_fmt_tag") = false, py::arg("debug") = false,
              "Reformat a code buffer, grouping lines with matching token "
              "patterns and indentation into blocks and aligning them into evn "
              "columns.")
-        .def("reformat_lines", &PythonLineTokenizer::reformat_lines,
-             py::arg("lines"), py::arg("add_fmt_tag") = false,
-             py::arg("debug") = false,
+        .def("reformat_lines", &PythonLineTokenizer::reformat_lines, py::arg("lines"),
+             py::arg("add_fmt_tag") = false, py::arg("debug") = false,
              "Reformat a code buffer (given as a vector of lines) by grouping "
              "lines with matching token patterns and indentation into blocks "
              "and  inorkeywords.begin(), keywords.end(), <stcolumns.");
+
+    m.def("tokenize", &tokenize, "Tokenize a single line of Python code");
+    m.def("tokens_match", &tokens_match,
+          "Compare two token vectors using wildcards for identifiers, "
+          "strings, and numerics");
+    m.def("is_oneline_statement", &is_oneline_statement, py::arg("tokens"),
+          "Check if a line is an oneline statement");
 }
