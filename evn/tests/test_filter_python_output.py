@@ -11,7 +11,7 @@ def helper_test_filter_python_output(text, ref, preset):
         diff = difflib.ndiff(result.splitlines(), ref.splitlines())
         print('\nDIFF:', flush=True)
         print('\n'.join(f'NDIFF {d}' for d in diff), flush=True)
-        assert len(result.splitlines()) == len(result.splitlines())
+        assert len(result.splitlines()) == len(ref.splitlines())
         # assert 0, 'filter mismatch'
 
 @pytest.mark.xfail

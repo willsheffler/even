@@ -28,8 +28,15 @@
     "build_systems":
     [
         {
+            "name": "test filter",
+            "shell_cmd": "cd $folder/evn; evn --filter boilerplate ~/rfd/sublime_build.log 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^(.+\\.py):([0-9]+): "
+
+        },
+        {
             "name": "pytest file",
-            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && PYTHONPATH=. \\$PYTEST -sx evn/tests) 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "cd $folder/evn; (ninja -j8 && cd .. && PYTHONPATH=. \\$PYTEST -sx evn/tests<) 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
 

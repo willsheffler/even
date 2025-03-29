@@ -18,7 +18,7 @@ def filter_python_output(
     entrypoint=None,
     re_file=re_null,
     re_func=re_null,
-    preset=None,
+    preset='boilerplate',
     minlines=30,
     filter_numpy_version_nonsense=True,
     keep_blank_lines=False,
@@ -73,7 +73,7 @@ def _strip_line_extra_whitespace(line):
     return line.rstrip()
 
 # def _strip_text_extra_whitespace(text):
-    # return re.sub(r'\n\n', os.linesep, text, re.MULTILINE)
+# return re.sub(r'\n\n', os.linesep, text, re.MULTILINE)
 
 def _filter_numpy_version_nonsense(text):
     text = text.replace(
