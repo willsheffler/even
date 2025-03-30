@@ -1,7 +1,7 @@
 from pathlib import Path
 
 root = Path(__file__).parent.absolute()
-build = root / '_build'
+build = root / 'evn/_build'
 
 def task_cmake():
     return {

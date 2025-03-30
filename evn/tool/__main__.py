@@ -5,7 +5,7 @@ import evn as evn
 def get_args(sysargv):
     """get command line arguments"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('input', type=str, nargs='+', default='')
+    parser.add_argument('input', type=str, nargs='+', default='', help='use - for stdin')
     parser.add_argument('-f', '--filter', default='boilerplate', choices=['', 'boilerplate'])
     parser.add_argument('-i', '--inplace', action='store_true')
     args = parser.parse_args(sysargv[1:])
@@ -19,7 +19,8 @@ def main():
             text = sys.stdin.read()
             args.inplace = False
         else:
-            with open(input_file, 'r') as inp:    text = inp . read()
+            with open(input_file, 'r') as inp:
+                text = inp.read()
         if args.filter:
             output = evn.filter_python_output(text, preset=args.filter)
         else:

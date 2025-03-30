@@ -42,3 +42,4 @@ __pycache__
 /.doit.db
 /.doit.db.db
 /_build
+*.sublime-workspace
