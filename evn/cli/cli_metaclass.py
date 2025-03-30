@@ -1,3 +1,46 @@
+"""
+cli_metaclass.py
+
+This module defines the `CliMeta` metaclass, which automatically turns classes into Click-based CLI command groups.
+It forms the backbone of the EVeN CLI system, enabling command registration via inheritance and minimal boilerplate.
+
+The key behaviors of this metaclass include:
+
+- Creating a `click.Group` for each CLI class.
+- Registering the group with a parent group (if inherited).
+- Registering each public method as a Click command via `auto_click_decorate_command`.
+- Injecting a structured logging method using `CliLogger`.
+- Composing type handlers from `ClickTypeHandlers`.
+
+Each CLI class using `CliMeta` gains the following attributes:
+- `__group__`: a `click.Group` containing its registered commands.
+- `__parent__`: a reference to its parent CLI class (if any).
+- `__type_handlers__`: merged parameter conversion handlers.
+- `__config__`: optional config returned from `_config()` classmethod.
+- `_log`: a callable logger that delegates to `CliLogger`.
+
+Usage Example:
+
+    >>> class ProjectCLI(metaclass=CliMeta):
+    ...     def create(self, name: str):
+    ...         print(f"Creating project {name}")
+    >>> from click.testing import CliRunner
+    >>> cli = ProjectCLI.__group__
+    >>> runner = CliRunner()
+    >>> result = runner.invoke(cli, ['create', 'demo'])
+    >>> assert "Creating project demo" in result.output
+
+Dependencies:
+- click
+- evn.cli.auto_click_decorator
+- evn.cli.cli_logger
+- evn.cli.cli_registry
+- evn.cli.click_type_handler
+
+See Also:
+- test_cli_metaclass.py — for validated examples and coverage.
+"""
+
 import click
 import datetime
 import functools

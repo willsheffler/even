@@ -4,18 +4,20 @@ import click
 import typing
 from click.testing import CliRunner
 from evn.cli.auto_click_decorator import auto_click_decorate_command
+from evn.cli.click_type_handler import ClickTypeHandler, ClickTypeHandlers, HandlerNotFoundError, MetadataPolicy
 
 # Import default basic handlers from our basic conversion layer.
-from evn.cli.basic_click_type_handlers import BasicIntHandler, BasicStringHandler, BasicBoolHandler, BasicFloatHandler
-from evn.cli.click_type_handler import ClickTypeHandlers
+from evn.cli.basic_click_type_handlers import BasicStringHandler
+
+class MetadataIgnoreHandler(ClickTypeHandler):
+    supported_types = {int: MetadataPolicy.REQUIRED}
+    _priority_bonus = 0
+
+    def convert(self, value, param, ctx):
+        return value
 
 # Prepare a list of type handlers.
-TYPE_HANDLERS = ClickTypeHandlers([
-    BasicIntHandler,
-    BasicStringHandler,
-    BasicBoolHandler,
-    BasicFloatHandler,
-])
+TYPE_HANDLERS = ClickTypeHandlers([BasicStringHandler, MetadataIgnoreHandler])
 
 # Dummy command with no manual decorators; use click.echo to print output.
 def dummy_command(a: int, b: str, c: bool = False):
@@ -110,6 +112,54 @@ def test_error_on_manual_click_command():
 
     with pytest.raises(RuntimeError):
         auto_click_decorate_command(already_command, TYPE_HANDLERS)
+
+def test_handler_skipped_without_required_metadata():
+
+    class DummyHandler(ClickTypeHandler):
+        __test__ = False
+        supported_types = {int: MetadataPolicy.REQUIRED}
+
+        def convert(self, value, param, ctx):
+            return int(value)
+
+    handlers = ClickTypeHandlers()
+    handlers.add(DummyHandler())
+
+    result = handlers.typehint_to_click_paramtype(int, 'foo')
+    assert isinstance(result, DummyHandler)
+
+    result = handlers.typehint_to_click_paramtype(int, None)
+    assert issubclass(result, int)
+
+def test_handler_priority_affects_resolution():
+
+    class LowPriority(ClickTypeHandler):
+        __test__ = False
+        supported_types = {int: MetadataPolicy.REQUIRED}
+        _priority_bonus = 1
+
+        def convert(self, value, param, ctx):
+            return 1
+
+    class HighPriority(ClickTypeHandler):
+        __test__ = False
+        supported_types = {int: MetadataPolicy.REQUIRED}
+        _priority_bonus = 10
+
+        def convert(self, value, param, ctx):
+            return 2
+
+    handlers = ClickTypeHandlers()
+    handlers.add(LowPriority())
+    handlers.add(HighPriority())
+
+    param_type = handlers.typehint_to_click_paramtype(int, ("some-metadata",))
+    assert param_type.convert("42", None, None) == 2
+
+def test_no_handler_returns_none():
+    handlers = ClickTypeHandlers()
+    with pytest.raises(HandlerNotFoundError):
+        result = handlers.typehint_to_click_paramtype(dict, None)
 
 if __name__ == "__main__":
     pytest.main([__file__])

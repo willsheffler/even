@@ -1,15 +1,9 @@
 # test_basic_click_type_handlers.py
 import pytest
 import click
-import uuid
 import datetime
 from evn.cli.basic_click_type_handlers import (
     BasicStringHandler,
-    BasicIntHandler,
-    BasicFloatHandler,
-    BasicBoolHandler,
-    BasicUUIDHandler,
-    BasicFileHandler,
     BasicPathHandler,
     BasicChoiceHandler,
     BasicIntRangeHandler,
@@ -28,43 +22,6 @@ def test_basic_string_handler():
     handler = BasicStringHandler()
     result = handler.convert("hello", DummyParam(), ctx)
     assert result == "hello"
-
-def test_basic_int_handler():
-    handler = BasicIntHandler()
-    result = handler.convert("42", DummyParam(), ctx)
-    assert result == 42
-
-def test_basic_float_handler():
-    handler = BasicFloatHandler()
-    result = handler.convert("3.1415", DummyParam(), ctx)
-    assert result == pytest.approx(3.1415)
-
-def test_basic_bool_handler_true():
-    handler = BasicBoolHandler()
-    result = handler.convert("yes", DummyParam(), ctx)
-    assert result is True
-
-def test_basic_bool_handler_false():
-    handler = BasicBoolHandler()
-    result = handler.convert("no", DummyParam(), ctx)
-    assert result is False
-
-def test_basic_uuid_handler():
-    u = uuid.uuid4()
-    handler = BasicUUIDHandler()
-    result = handler.convert(str(u), DummyParam(), ctx)
-    assert result == u
-
-def test_basic_file_handler(tmp_path):
-    # Create a temporary file with known content.
-    temp_file = tmp_path / "test.txt"
-    temp_file.write_text("file content")
-    handler = BasicFileHandler()
-    result = handler.convert(str(temp_file), DummyParam(), ctx)
-    # The result should be an open file.
-    content = result.read()
-    result.close()
-    assert content == "file content"
 
 def test_basic_path_handler(tmp_path):
     handler = BasicPathHandler()

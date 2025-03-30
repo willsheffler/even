@@ -1,4 +1,5 @@
 # basic_click_type_handlers.py
+import pathlib
 import click
 import uuid
 from evn.cli.click_type_handler import ClickTypeHandler, MetadataPolicy
@@ -14,28 +15,6 @@ class BasicStringHandler(ClickTypeHandler):
             return self.postprocess_value(str(preprocessed))
         except Exception as e:
             self.fail(f"BasicStringHandler conversion failed: {e}", param, ctx)
-
-class BasicIntHandler(ClickTypeHandler):
-    supported_types = {int: MetadataPolicy.FORBID}
-    _priority_bonus = 0
-
-    def convert(self, value, param, ctx):
-        try:
-            preprocessed = self.preprocess_value(value)
-            return self.postprocess_value(int(preprocessed))
-        except Exception as e:
-            self.fail(f"BasicIntHandler conversion failed: {e}", param, ctx)
-
-class BasicFloatHandler(ClickTypeHandler):
-    supported_types = {float: MetadataPolicy.FORBID}
-    _priority_bonus = 0
-
-    def convert(self, value, param, ctx):
-        try:
-            preprocessed = self.preprocess_value(value)
-            return self.postprocess_value(float(preprocessed))
-        except Exception as e:
-            self.fail(f"BasicFloatHandler conversion failed: {e}", param, ctx)
 
 class BasicBoolHandler(ClickTypeHandler):
     supported_types = {bool: MetadataPolicy.FORBID}
@@ -69,22 +48,9 @@ class BasicUUIDHandler(ClickTypeHandler):
         except Exception as e:
             self.fail(f"BasicUUIDHandler conversion failed: {e}", param, ctx)
 
-class BasicFileHandler(ClickTypeHandler):
-    supported_types = {click.File: MetadataPolicy.FORBID}
-    _priority_bonus = 0
-
-    def convert(self, value, param, ctx):
-        try:
-            preprocessed = self.preprocess_value(value)
-            # Create a default click.File instance.
-            file_type = click.File()
-            result = file_type.convert(preprocessed, param, ctx)
-            return self.postprocess_value(result)
-        except Exception as e:
-            self.fail(f"BasicFileHandler conversion failed: {e}", param, ctx)
 
 class BasicPathHandler(ClickTypeHandler):
-    supported_types = {click.Path: MetadataPolicy.FORBID}
+    supported_types = {pathlib.Path: MetadataPolicy.FORBID}
     _priority_bonus = 0
 
     def convert(self, value, param, ctx):

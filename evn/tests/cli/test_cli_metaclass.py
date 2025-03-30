@@ -2,7 +2,7 @@
 import pytest
 import click
 from click.testing import CliRunner
-from evn.cli.cli_metaclass import CliBase
+from evn.cli.cli_metaclass import CliBase, CliMeta
 from evn.cli.auto_click_decorator import auto_click_decorate_command
 from evn.cli.cli_logger import CliLogger
 from evn.cli.click_type_handler import ClickTypeHandlers
@@ -94,6 +94,36 @@ def test_click_metadata_capture():
     decorated = auto_click_decorate_command(CLIDebugTest.greet, ClickTypeHandlers)
     assert [['--default'],['name']] == [p.opts for p in getattr(decorated, '__click_params__', [])]
     assert {} == getattr(decorated, '__click_attrs__', {})
+
+def test_empty_cli_group_creates_successfully():
+    class EmptyCLI(metaclass=CliMeta):
+        pass
+
+    assert isinstance(EmptyCLI.__group__, click.Group)
+    assert len(EmptyCLI.__group__.commands) == 0
+
+def test_config_is_applied():
+    class ConfiguredCLI(metaclass=CliMeta):
+        @classmethod
+        def _config(cls):
+            return {"hello": "world"}
+
+    assert ConfiguredCLI.__config__ == {"hello": "world"}
+
+def test_command_override():
+    class BaseCLI(metaclass=CliMeta):
+        def greet(self):
+            print("base")
+
+    class SubCLI(BaseCLI):
+        def greet(self):
+            print("sub")
+
+    runner = CliRunner()
+    result = runner.invoke(SubCLI.__group__, ['greet'])
+    assert "base" not in result.output
+    assert "sub" in result.output
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

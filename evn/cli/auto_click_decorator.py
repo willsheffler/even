@@ -1,9 +1,53 @@
+"""
+auto_click_decorator.py
+
+This module provides `auto_click_decorate_command()`, which inspects a function's signature
+and applies Click decorators for each parameter based on type annotations and defaults. The decorators applied will be either click.option or click.argument, depending on whether the parameter is required or optional.
+
+It does **not** apply @click.command — this must be added separately by the caller.
+
+Features:
+- Required arguments become `click.argument(...)`
+- Optional arguments become `click.option(...)`
+- Boolean values become flags (with `is_flag=True`)
+- `typing.Annotated` metadata is supported
+- Type resolution is handled via `ClickTypeHandlers`
+
+Raises:
+- RuntimeError if passed a function already decorated with `@click.command`
+- ValueError if the parameter type cannot be resolved
+
+Example (doctestable):
+
+>>> import click
+>>> from evn.cli.auto_click_decorator import auto_click_decorate_command
+>>> from evn.cli.click_type_handler import ClickTypeHandlers
+>>> from click.testing import CliRunner
+
+>>> def greet(name: str = "world"):
+...     print(f"Hello {name}!")
+
+>>> click_params_greet = auto_click_decorate_command(greet, ClickTypeHandlers())
+>>> click_command_greet = click.command(click_params_greet)
+>>> result = CliRunner().invoke(click_command_greet, ["--name", "Alice"])
+>>> assert "Hello Alice!" in result.output
+
+See Also:
+- click.argument
+- click.option
+- evn.cli.click_type_handler.ClickTypeHandlers
+- test_auto_click_decorator.py
+"""
+
 import inspect
 import click
 import typing
 from functools import wraps
 
 from evn.cli.click_type_handler import ClickTypeHandlers
+
+def make_hashable(stuff):
+    return tuple(make_hashable(item) if isinstance(item, list) else item for item in stuff)
 
 def _extract_annotation(annotation):
     """
@@ -12,8 +56,8 @@ def _extract_annotation(annotation):
     """
     if typing.get_origin(annotation) is typing.Annotated:
         if args := typing.get_args(annotation):
-            return args[0], annotation, args[1:]
-    return annotation, None, None
+            return args[0], make_hashable(args[1:])
+    return annotation, None
 
 def _generate_click_decorator(name, param, type_handlers: ClickTypeHandlers):
     """
@@ -21,15 +65,9 @@ def _generate_click_decorator(name, param, type_handlers: ClickTypeHandlers):
     generate a Click decorator (click.argument for required parameters, click.option for optional ones)
     for that parameter.
     """
-    basetype, annotation, metadata = _extract_annotation(param.annotation)
+    basetype, metadata = _extract_annotation(param.annotation)
     # Determine the Click ParamType via our type handlers.
-
     param_type = type_handlers.typehint_to_click_paramtype(basetype, metadata)
-    if not param_type and type_handlers:
-        raise ValueError(
-            f"No suitable Click ParamType found for basetype {basetype} annotation '{annotation}' with metadata '{metadata}' {type_handlers}"
-        )
-
     has_default = (param.default != inspect.Parameter.empty)
     # For booleans, always use option with is_flag=True.
     if basetype is bool and not metadata:
@@ -43,10 +81,11 @@ def _generate_click_decorator(name, param, type_handlers: ClickTypeHandlers):
         kwargs = {"default": param.default, "show_default": True}
         if param_type:
             kwargs["type"] = param_type
-        if annotation is bool:
+        if basetype is bool:
             kwargs["is_flag"] = True
         deco = click.option(*option_names, **kwargs)
     # ic(name, type(deco))
+    deco
     return deco
 
 def auto_click_decorate_command(fn, type_handlers: ClickTypeHandlers):
