@@ -2,7 +2,7 @@ import click
 from evn.cli.cli_registry import CliRegistry
 from evn.cli.cli_metaclass import CliBase
 
-def setup_module(module):
+def setup_module():
     CliRegistry.reset()
 
 class CLIExample(CliBase):
@@ -14,7 +14,7 @@ def test_register_and_reset():
     CLIExample()  # instantiate singleton
     assert hasattr(CLIExample, "_instance")
     assert hasattr(CLIExample, "__log__")
-    CLIExample.log(CLIExample(), "Test log")
+    CLIExample._log("Test log")
     assert len(CLIExample.__log__) > 0
 
     CliRegistry.reset()
@@ -31,3 +31,7 @@ def test_get_root_commands():
     roots = CliRegistry.get_root_commands()
     group_name = CLIExample.__group__.name
     assert group_name in roots, f"Expected group '{group_name}' in {roots.keys()}"
+
+def test_registry_unique():
+    clis = CliRegistry.all_cli_classes()
+    assert len(clis) == len(set(clis))

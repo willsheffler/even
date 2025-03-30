@@ -5,6 +5,7 @@ from click.testing import CliRunner
 from evn.cli.cli_metaclass import CliBase
 from evn.cli.auto_click_decorator import auto_click_decorate_command
 from evn.cli.cli_logger import CliLogger
+from evn.cli.click_type_handler import ClickTypeHandlers
 
 # Define a dummy parent CLI tool.
 class CLIParent(CliBase):
@@ -55,13 +56,11 @@ def test_config_logging():
     assert hasattr(CLIParent, "__config__")
     assert CLIParent.__config__ == {"parent_option": "value_from_parent"}
     logs = CliLogger.get_log(CLIParent)
-    # logs = CLIParent.__log__
     found = any("Configuration applied" in log.get("message", "") for log in logs)
     assert found
 
 def test_instance_logging():
     parent_instance = CLIParent()
-    # logs = CLIParent.__log__
     logs = CliLogger.get_log(CLIParent)
     found = any("Instance created" in log.get("message", "") for log in logs)
     assert found
@@ -75,14 +74,13 @@ def test_get_full_path():
 def test_greet_command():
     runner = CliRunner()
     result = runner.invoke(CLIParent.__group__, ["greet", "Alice"])
-    print(result.output)
 
 def test_greet_command_exists():
     assert "greet" in CLIParent.__group__.commands
 
 class CLIDebugTest(CliBase):
 
-    def greet(self, name: str):
+    def greet(self, name: str, default=7):
         """Basic test for argument passing."""
         click.echo(f"Hello, {name}!")
 
@@ -93,9 +91,9 @@ def test_debug_sanity_command_runs():
     assert "Hello, TestUser!" in result.output
 
 def test_click_metadata_capture():
-    decorated = auto_click_decorate_command(CLIDebugTest.greet, [])
-    print(f"Params: {[p.opts for p in getattr(decorated, '__click_params__', [])]}")
-    print(f"Attrs: {getattr(decorated, '__click_attrs__', {})}")
+    decorated = auto_click_decorate_command(CLIDebugTest.greet, ClickTypeHandlers)
+    assert [['--default'],['name']] == [p.opts for p in getattr(decorated, '__click_params__', [])]
+    assert {} == getattr(decorated, '__click_attrs__', {})
 
 if __name__ == "__main__":
     pytest.main([__file__])

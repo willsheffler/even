@@ -6,10 +6,16 @@ from click.testing import CliRunner
 from evn.cli.auto_click_decorator import auto_click_decorate_command
 
 # Import default basic handlers from our basic conversion layer.
-from evn.cli.basic_click_type_handlers import BasicIntHandler, BasicStringHandler, BasicBoolHandler
+from evn.cli.basic_click_type_handlers import BasicIntHandler, BasicStringHandler, BasicBoolHandler, BasicFloatHandler
+from evn.cli.click_type_handler import ClickTypeHandlers
 
 # Prepare a list of type handlers.
-TYPE_HANDLERS = [BasicIntHandler, BasicStringHandler, BasicBoolHandler]
+TYPE_HANDLERS = ClickTypeHandlers([
+    BasicIntHandler,
+    BasicStringHandler,
+    BasicBoolHandler,
+    BasicFloatHandler,
+])
 
 # Dummy command with no manual decorators; use click.echo to print output.
 def dummy_command(a: int, b: str, c: bool = False):
@@ -25,6 +31,7 @@ auto_dummy_command = click.command()(auto_dummy_command)
 def partial_manual(a: int, b: str):
     """Partial manual command for testing merging."""
     click.echo(f"{a}-{b}")
+
 # Manually decorate parameter b.
 partial_manual = click.option("--b", type=str, default="manual")(partial_manual)
 auto_partial_manual = auto_click_decorate_command(partial_manual, TYPE_HANDLERS)
@@ -34,6 +41,7 @@ auto_partial_manual = click.command()(auto_partial_manual)
 def annotated_command(a: typing.Annotated[int, "metadata info"], b: str):
     """Command with Annotated parameter."""
     click.echo(f"{a}-{b}")
+
 auto_annotated_command = auto_click_decorate_command(annotated_command, TYPE_HANDLERS)
 auto_annotated_command = click.command()(auto_annotated_command)
 
@@ -42,6 +50,7 @@ def internal_param_command(a: int, _internal: str, b: str):
     """Command that has an internal parameter (_internal) that should be ignored."""
     # _internal should be supplied as None.
     click.echo(f"{a}-{_internal}-{b}")
+
 auto_internal_command = auto_click_decorate_command(internal_param_command, TYPE_HANDLERS)
 auto_internal_command = click.command()(auto_internal_command)
 
@@ -49,15 +58,18 @@ auto_internal_command = click.command()(auto_internal_command)
 def complex_command(a: int, b: str = "default", c: bool = False, d: float = 3.14):
     """A command with mixed required and optional parameters."""
     click.echo(f"{a}-{b}-{c}-{d}")
+
 auto_complex_command = auto_click_decorate_command(complex_command, TYPE_HANDLERS)
 auto_complex_command = click.command()(auto_complex_command)
 
 def test_auto_generated_parameters():
     runner = CliRunner()
     # 'a' and 'b' are required, 'c' is an optional boolean flag.
+    result = runner.invoke(auto_dummy_command, ["123", "hello"])
+    assert result.exit_code == 0
+    assert "123-hello-False" in result.output
     result = runner.invoke(auto_dummy_command, ["123", "hello", "--c"])
     assert result.exit_code == 0
-    # The output should be "123-hello-True"
     assert "123-hello-True" in result.output
 
 def test_manual_decorator_merging():
@@ -95,6 +107,7 @@ def test_error_on_manual_click_command():
     @click.command()
     def already_command(x: int):
         click.echo(str(x))
+
     with pytest.raises(RuntimeError):
         auto_click_decorate_command(already_command, TYPE_HANDLERS)
 

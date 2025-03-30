@@ -2,7 +2,6 @@
 from datetime import datetime, timezone
 import threading
 
-
 class CliLogger:
     """
     Centralized logger for CliBase classes.
@@ -14,15 +13,20 @@ class CliLogger:
     @classmethod
     def log(cls, target, message: str, *, event: str = None, data: dict = None):
         path = cls._resolve_path(target)
-        entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "path": path,
-            "event": event or "log",
-            "message": message,
-            "data": data or {},
-        }
+        if isinstance(message, dict):
+            assert event is None and data is None
+            entry = message
+        else:
+            entry = {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "path": path,
+                "event": event or "log",
+                "message": message,
+                "data": data or {},
+            }
         with cls._lock:
             cls._logs.setdefault(path, []).append(entry)
+        target.__log__.append(message)
 
     @classmethod
     def get_log(cls, target) -> list[dict]:
@@ -53,14 +57,17 @@ class CliLogger:
     @classmethod
     def log_event_context(cls, target, event: str, data: dict = None):
         """Context manager for logging entry/exit of an event."""
+
         class _LogCtx:
+
             def __enter__(self_):
                 cls.log(target, f"begin {event}", event=event, data=data)
                 return self_
+
             def __exit__(self_, *exc):
                 cls.log(target, f"end {event}", event=event, data=data)
-        return _LogCtx()
 
+        return _LogCtx()
 
 # Usage:
 # CliLogger.log(self, "message", event="something_happened", data={...})

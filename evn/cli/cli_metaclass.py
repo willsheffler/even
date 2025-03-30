@@ -1,20 +1,33 @@
 import click
 import datetime
 import functools
+import typing
 from evn.cli.auto_click_decorator import auto_click_decorate_command
 from evn.cli.cli_registry import CliRegistry
 from evn.cli.cli_logger import CliLogger
+from evn.cli.click_type_handler import ClickTypeHandlers
 
 class CliMeta(type):
+    # there are NOT ACTUALLY USED just to make the type checker happy
+    __group__: click.Group
+    __parent__: 'CliBase | None'
+    __type_handlers__: ClickTypeHandlers
+    __config__: dict
+    _config: classmethod
+    _log: typing.Callable[['dict|str'], None]
 
     def __new__(mcls, name, bases, namespace):
         cls = super().__new__(mcls, name, bases, namespace)
 
+        @classmethod
+        def log(cls, *a, **kw):
+            CliLogger.log(cls, *a, **kw)
+
+        cls._log, cls.__log__ = log, []
+
         cls.__group__ = click.Group(name=cls.__name__.removeprefix("CLI").lower())
         CliLogger.log(cls, f"Registered group: {cls.__group__.name}", event="group_registered")
         # print(f"[CliMeta] Registered group for {cls.__name__} -> {cls.__group__.name}")
-
-        cls.__log__ = []
 
         parent = None
         for base in bases:
@@ -24,34 +37,19 @@ class CliMeta(type):
                 break
         cls.__parent__ = parent
 
-        collected = []
+        cls.__type_handlers__ = ClickTypeHandlers()
         for base in reversed(cls.__mro__):
-            if hasattr(base, "click_type_handlers"):
-                for h in base.click_type_handlers:
-                    if h not in collected:
-                        collected.append(h)
-        cls.__collected_type_handlers__ = collected
-
-        def log_method(self, message, **kwargs):
-            entry = {
-                "path": self.get_full_path(),
-                "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "message": message,
-                **kwargs,
-            }
-            self.__log__.append(entry)
-
-        cls.log = log_method
+            cls.__type_handlers__ |= set(getattr(base, 'click_type_handlers', set()))
 
         def create_command(method, cls_ref):
             # Get the auto-decorated function and extract click metadata
-            decorated = auto_click_decorate_command(method, cls_ref.__collected_type_handlers__)
+            decorated = auto_click_decorate_command(method, cls_ref.__type_handlers__)
 
             @click.pass_context
             @functools.wraps(decorated)
             def wrapper(ctx, *args, **kwargs):
                 instance = cls_ref()
-                print(f"🧪 DEBUG: calling {method.__name__} with args={args}, kwargs={kwargs}")
+                # print(f"🧪 DEBUG: calling {method.__name__} with args={args}, kwargs={kwargs}")
                 return method(instance, *args, **kwargs)
 
             # Extract click metadata from the decorated function
@@ -63,26 +61,21 @@ class CliMeta(type):
                                  params=click_params,
                                  **click_attrs)
 
+        # add click decorategd member functions
         for attr_name, attr in namespace.items():
             if callable(attr) and not attr_name.startswith("_") and attr.__qualname__.split(".")[0] == name:
                 command = create_command(attr, cls)
                 cls.__group__.add_command(command, name=attr_name)
-            # Register nested CliBase subclasses as subcommands
-            elif hasattr(attr, "__group__") and isinstance(attr.__group__, click.Group):
-                cls.__group__.add_command(attr.__group__, name)
-                setattr(attr.__class__, "__parent__", cls)
-
 
         cls.__config__ = {}
         if hasattr(cls, "_config") and callable(cls._config):
             cls.__config__ = cls._config()
-            cls.__log__.append({
+            cls._log({
                 "path": cls.__group__.name,
                 "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "message": "Configuration applied",
                 "config": cls.__config__
             })
-        CliLogger.log(cls, "Configuration applied", event="config", data=cls.__config__)
 
         CliRegistry.register(cls)
 
@@ -97,16 +90,33 @@ class CliMeta(type):
         return instance
 
 class CliBase(metaclass=CliMeta):
+    __group__: click.Group
+    __parent__: 'CliBase | None'
+    __type_handlers__ = ClickTypeHandlers
+    __config__: dict
+    _config: classmethod
+    _clslog: classmethod
+    _log: typing.Callable[['CliBase', 'dict|str'], None]
+    __log__: list[str]
     click_type_handlers = []
 
-    def get_full_path(self):
-        parent = self.__class__.__parent__
+    @classmethod
+    def get_full_path(cls):
+        parent = cls.__parent__
         if parent and parent.__name__ != "CliBase":
-            return parent.__name__ + "." + self.__class__.__name__
-        return self.__class__.__name__
+            return f"{parent.get_full_path()}.{cls.__name__}"
+        return cls.__name__
 
-    def run(self):
-        root = self.__class__
+    @classmethod
+    def get_command_path(cls):
+        path = cls.__name__.removeprefix("CLI").lower()
+        parent = cls.__parent__
+        if parent and parent.__name__ != "CliBase":
+            path = f"{parent.get_command_path()}.{path}"
+        return path
+
+    def _run(self):
+        root: type = self.__class__
         while root.__parent__:
             root = root.__parent__
         root().__group__()

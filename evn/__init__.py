@@ -7,3 +7,7 @@ from evn.dev import *
 from evn.tool import *
 # from evn.print import *
 # from evn.decontain import *
+from icecream import ic as ic
+ic.configureOutput(includeContext=True, prefix="🍦")
+import builtins
+builtins.ic = ic  # make ic available globally

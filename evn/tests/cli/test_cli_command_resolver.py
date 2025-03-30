@@ -1,36 +1,41 @@
+# test_cli_command_resolver.py
+import pytest
 from click import Command
 from evn.cli.cli_command_resolver import walk_commands, find_command, get_all_cli_paths
 from evn.cli.cli_metaclass import CliBase
 
+pytestmark = pytest.mark.usefixtures("capfd")
 
-# Dummy classes for test
-class CLITestSub(CliBase):
-    def hello(self, name: str):
-        print(f"Hello {name}")
-
-
+# CLI hierarchy using inheritance
 class CLITestTop(CliBase):
+
     def greet(self, name: str):
-        print(f"Hi {name}")
+        return f"Hi {name}"
 
-    sub = CLITestSub()
+class CLITestSub(CLITestTop):
 
+    def hello(self, name: str):
+        return f"Hello {name}"
 
 def test_walk_commands_finds_all():
-    top_paths = [p for p, _ in walk_commands(CLITestTop)]
-    assert "greet" in top_paths
-    assert "sub" in top_paths
-    assert "sub.hello" in top_paths
-
+    paths = [p for p, _ in walk_commands(CLITestTop)]
+    print("walked command paths:", paths)
+    assert "testtop.greet" in paths
+    assert "testtop.testsub.hello" in paths
 
 def test_find_command_by_path():
-    cmd = find_command(CLITestTop, "sub")
+    cmd = find_command(CLITestTop, "testsub")
     assert isinstance(cmd, Command)
-    sub_cmd = find_command(CLITestTop, "sub.hello")
+    sub_cmd = find_command(CLITestTop, "testsub.hello")
     assert isinstance(sub_cmd, Command)
-
 
 def test_get_all_cli_paths_contains_expected():
     paths = get_all_cli_paths()
+    print("all CLI paths:", paths)
     assert any("greet" in p for p in paths)
-    assert any("sub.hello" in p for p in paths)
+    assert any("testsub.hello" in p for p in paths)
+
+def test_get_all_cli_paths_unique():
+    paths = get_all_cli_paths()
+    for k in paths:
+        assert paths.count(k) == 1, f"Duplicate path found: {k}"

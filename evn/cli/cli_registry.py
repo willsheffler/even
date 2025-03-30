@@ -13,6 +13,8 @@ class CliRegistry:
     def register(cls, cli_class: Type) -> None:
         if cli_class not in cls._cli_classes:
             cls._cli_classes.append(cli_class)
+        else:
+            raise ValueError(f"CLI class {cli_class.__name__} is already registered.")
 
     @classmethod
     def all_cli_classes(cls) -> List[Type]:
