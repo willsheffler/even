@@ -3,6 +3,9 @@ import pytest
 import click
 from evn.cli.click_type_handler import ClickTypeHandler, MetadataPolicy, get_cached_paramtype
 
+class DummyParam:
+    pass
+
 # Dummy handler classes for testing. Mark them as not tests.
 class DummyIntHandler(ClickTypeHandler):
     __test__ = False  # Prevent pytest collection.
@@ -133,8 +136,6 @@ def test_get_cached_paramtype():
 # Test conversion: DummyIntHandler should convert a string to int.
 def test_convert_int():
     handler = DummyIntHandler()
-    class DummyParam:
-        pass
     ctx = click.get_current_context(silent=True)
     result = handler.convert("123", DummyParam(), ctx)
     assert result == 123
@@ -142,16 +143,12 @@ def test_convert_int():
 # Test conversion: DummyBoolHandler should convert strings to booleans.
 def test_convert_bool_true():
     handler = DummyBoolHandler()
-    class DummyParam:
-        pass
     ctx = click.get_current_context(silent=True)
     result = handler.convert("yes", DummyParam(), ctx)
     assert result is True
 
 def test_convert_bool_false():
     handler = DummyBoolHandler()
-    class DummyParam:
-        pass
     ctx = click.get_current_context(silent=True)
     result = handler.convert("no", DummyParam(), ctx)
     assert result is False
@@ -160,8 +157,6 @@ def test_convert_bool_false():
 def test_convert_list():
     handler = DummyListHandler()
     handler.metadata = int  # Simulate metadata.
-    class DummyParam:
-        pass
     ctx = click.get_current_context(silent=True)
     result = handler.convert("1, 2, 3", DummyParam(), ctx)
     assert result == [1, 2, 3]
@@ -169,8 +164,6 @@ def test_convert_list():
 # Test conversion: DummyFloatHandler should convert a string to float.
 def test_convert_float():
     handler = DummyFloatHandler()
-    class DummyParam:
-        pass
     ctx = click.get_current_context(silent=True)
     result = handler.convert("123.45", DummyParam(), ctx)
     assert result == 123.45
@@ -178,11 +171,23 @@ def test_convert_float():
 # Test conversion: DummyStringHandler should return the input string.
 def test_convert_string():
     handler = DummyStringHandler()
-    class DummyParam:
-        pass
     ctx = click.get_current_context(silent=True)
     result = handler.convert("hello world", DummyParam(), ctx)
     assert result == "hello world"
+
+def test_bool_handler_invalid_input():
+    from evn.cli.basic_click_type_handlers import BasicBoolHandler
+    handler = BasicBoolHandler()
+    ctx = click.get_current_context(silent=True)
+    with pytest.raises(click.BadParameter):
+        handler.convert("maybe", DummyParam(), ctx)
+
+def test_uuid_handler_invalid_input():
+    from evn.cli.basic_click_type_handlers import BasicUUIDHandler
+    handler = BasicUUIDHandler()
+    ctx = click.get_current_context(silent=True)
+    with pytest.raises(click.BadParameter):
+        handler.convert("not-a-uuid", DummyParam(), ctx)
 
 if __name__ == "__main__":
     pytest.main([__file__])

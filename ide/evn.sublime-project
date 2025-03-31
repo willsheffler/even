@@ -2,7 +2,7 @@
     "folders":
     [
         {
-            "path": "..",
+            "path": "/home/sheffler/evn",
             "folder_exclude_patterns":
             [
                 "site-packages"
@@ -30,9 +30,10 @@
     [
         {
             "name": "pytest",
-            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTEST -sx 2>&1 | tee $folder/ide/sublime_build.log",
-            "file_regex": "^E?\\s*File \"(...*?)\", line ([0-9]*)"
-            // "file_regex": "^(.+\\.py):([0-9]+): "
+            "working_dir": "$folder",
+            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/cli evn/cli -sx 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^E?\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^(.+\\.py):([0-9]+): "
 
         },
         {

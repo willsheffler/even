@@ -21,7 +21,7 @@ Each CLI class using `CliMeta` gains the following attributes:
 
 Usage Example:
 
-    >>> class ProjectCLI(metaclass=CliMeta):
+    >>> class ProjectCLI(CLI):
     ...     def create(self, name: str):
     ...         print(f"Creating project {name}")
     >>> from click.testing import CliRunner
@@ -50,11 +50,26 @@ from evn.cli.cli_registry import CliRegistry
 from evn.cli.cli_logger import CliLogger
 from evn.cli.click_type_handler import ClickTypeHandlers
 
+def cls_to_groupname(cls):
+    """
+    Converts a class name to a Click group name.
+    This is typically the same as the class name but can be customized if needed.
+
+    Args:
+        cls (type): The class to convert.
+
+    Returns:
+        str: The name to be used for the Click group.
+    """
+    if cls.__name__ == 'CLI': return '<exe>'
+    return cls.__name__.lower().removeprefix('cli').removesuffix('cli')
+
 class CliMeta(type):
     # there are NOT ACTUALLY USED just to make the type checker happy
     __group__: click.Group
-    __parent__: 'CliBase | None'
+    __parent__: 'CLI | None'
     __type_handlers__: ClickTypeHandlers
+    __all_type_handlers__: list[ClickTypeHandlers]
     __config__: dict
     _config: classmethod
     _log: typing.Callable[['dict|str'], None]
@@ -68,47 +83,45 @@ class CliMeta(type):
 
         cls._log, cls.__log__ = log, []
 
-        cls.__group__ = click.Group(name=cls.__name__.removeprefix("CLI").lower())
+        cls.__group__ = click.Group(name=cls_to_groupname(cls))
         CliLogger.log(cls, f"Registered group: {cls.__group__.name}", event="group_registered")
         # print(f"[CliMeta] Registered group for {cls.__name__} -> {cls.__group__.name}")
 
-        parent = None
+        cls.__parent__ = None
         for base in bases:
-            if hasattr(base, "__group__") and base.__name__ != "CliBase":
-                parent = base
-                base.__group__.add_command(cls.__group__, name=cls.__group__.name)
-                break
-        cls.__parent__ = parent
+            assert hasattr(base, "__group__")
+            assert not cls.__parent__
+            cls.__parent__ = base
+            base.__group__.add_command(cls.__group__, name=cls.__group__.name)
 
-        cls.__type_handlers__ = ClickTypeHandlers()
-        for base in reversed(cls.__mro__):
-            cls.__type_handlers__ |= set(getattr(base, 'click_type_handlers', set()))
+        cls.__all_type_handlers__ = []
+        for base in cls.__mro__:
+            handlers = ClickTypeHandlers(getattr(base, '__type_handlers__', {}))
+            cls.__all_type_handlers__.append(handlers)
 
-        def create_command(method, cls_ref):
+        for name in cls.__dict__:
+            if cls.__name__ == 'CLI': break
+            if name.startswith("_"): continue
+            method = getattr(cls, name)
+            if not callable(method): continue
             # Get the auto-decorated function and extract click metadata
-            decorated = auto_click_decorate_command(method, cls_ref.__type_handlers__)
+            decorated = auto_click_decorate_command(method, cls.__all_type_handlers__)
 
             @click.pass_context
             @functools.wraps(decorated)
             def wrapper(ctx, *args, **kwargs):
-                instance = cls_ref()
+                instance = cls()
                 # print(f"🧪 DEBUG: calling {method.__name__} with args={args}, kwargs={kwargs}")
                 return method(instance, *args, **kwargs)
 
             # Extract click metadata from the decorated function
             click_params = getattr(decorated, "__click_params__", [])
             click_attrs = getattr(decorated, "__click_attrs__", {})
-
-            return click.Command(name=click_attrs.get("name", method.__name__),
-                                 callback=wrapper,
-                                 params=click_params,
-                                 **click_attrs)
-
-        # add click decorategd member functions
-        for attr_name, attr in namespace.items():
-            if callable(attr) and not attr_name.startswith("_") and attr.__qualname__.split(".")[0] == name:
-                command = create_command(attr, cls)
-                cls.__group__.add_command(command, name=attr_name)
+            cmd = click.Command(name=click_attrs.get("name", method.__name__),
+                                callback=wrapper,
+                                params=click_params,
+                                **click_attrs)
+            cls.__group__.add_command(cmd, name=method.__name__)
 
         cls.__config__ = {}
         if hasattr(cls, "_config") and callable(cls._config):
@@ -132,34 +145,66 @@ class CliMeta(type):
         CliLogger.log(instance, "Instance created", event="instance_created")
         return instance
 
-class CliBase(metaclass=CliMeta):
-    __group__: click.Group
-    __parent__: 'CliBase | None'
-    __type_handlers__ = ClickTypeHandlers
-    __config__: dict
-    _config: classmethod
-    _clslog: classmethod
-    _log: typing.Callable[['CliBase', 'dict|str'], None]
-    __log__: list[str]
-    click_type_handlers = []
+class CLI(metaclass=CliMeta):
+    __parent__ = None
 
     @classmethod
     def get_full_path(cls):
-        parent = cls.__parent__
-        if parent and parent.__name__ != "CliBase":
-            return f"{parent.get_full_path()}.{cls.__name__}"
+        if parent := cls.__parent__:
+            return f"{parent.get_full_path()} {cls.__name__}"
         return cls.__name__
 
     @classmethod
     def get_command_path(cls):
-        path = cls.__name__.removeprefix("CLI").lower()
-        parent = cls.__parent__
-        if parent and parent.__name__ != "CliBase":
-            path = f"{parent.get_command_path()}.{path}"
+        path = cls_to_groupname(cls)
+        if parent := cls.__parent__:
+            path = f"{parent.get_command_path()} {path}"
         return path
 
-    def _run(self):
-        root: type = self.__class__
-        while root.__parent__:
-            root = root.__parent__
-        root().__group__()
+    @classmethod
+    def _testroot(cls, cmd):
+        return click.testing.CliRunner().invoke(cls._root().__group__, cmd)
+
+    @classmethod
+    def _test(cls, cmd):
+        return click.testing.CliRunner().invoke(cls.__group__, cmd)
+
+    @classmethod
+    def _run(cls):
+        cls._root.__group__()
+
+    @classmethod
+    def _root(cls):
+        while cls.__parent__:
+            cls = cls.__parent__
+        return cls
+
+    @classmethod
+    def _walk_click(cls):
+        return all_command_names(cls.__group__)
+
+def all_command_names(group: click.Group, prefix=""):
+    """
+    Recursively prints all command names in a Click group as a comma-separated list.
+
+    Args:
+        group (click.Group): The root Click group to inspect.
+        prefix (str): Internal use for recursive path tracking.
+
+    Example:
+        >>> all_command_names(cli)
+        top-level, top-level.subcommand, ...
+    """
+    commands = []
+    print(group.name, group.commands)
+
+    def walk(g: click.Group, path: str):
+        # print(g)
+        for name, cmd in g.commands.items():
+            full_path = f"{path} {name}" if path else name
+            commands.append(full_path)
+            if isinstance(cmd, click.Group):
+                walk(cmd, full_path)
+
+    walk(group, prefix)
+    return commands

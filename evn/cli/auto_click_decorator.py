@@ -39,12 +39,13 @@ See Also:
 - test_auto_click_decorator.py
 """
 
+import contextlib
 import inspect
 import click
 import typing
 from functools import wraps
 
-from evn.cli.click_type_handler import ClickTypeHandlers
+from evn.cli.click_type_handler import ClickTypeHandlers, HandlerNotFoundError
 
 def make_hashable(stuff):
     return tuple(make_hashable(item) if isinstance(item, list) else item for item in stuff)
@@ -59,7 +60,7 @@ def _extract_annotation(annotation):
             return args[0], make_hashable(args[1:])
     return annotation, None
 
-def _generate_click_decorator(name, param, type_handlers: ClickTypeHandlers):
+def _generate_click_decorator(name, param, type_handlers: list[ClickTypeHandlers]):
     """
     Given a parameter (an inspect.Parameter object) and a list of type handlers,
     generate a Click decorator (click.argument for required parameters, click.option for optional ones)
@@ -67,7 +68,11 @@ def _generate_click_decorator(name, param, type_handlers: ClickTypeHandlers):
     """
     basetype, metadata = _extract_annotation(param.annotation)
     # Determine the Click ParamType via our type handlers.
-    param_type = type_handlers.typehint_to_click_paramtype(basetype, metadata)
+    param_type = None
+    for handlers in type_handlers:
+        with contextlib.suppress(HandlerNotFoundError):
+            param_type = handlers.typehint_to_click_paramtype(basetype, metadata)
+            break
     has_default = (param.default != inspect.Parameter.empty)
     # For booleans, always use option with is_flag=True.
     if basetype is bool and not metadata:
@@ -88,7 +93,7 @@ def _generate_click_decorator(name, param, type_handlers: ClickTypeHandlers):
     deco
     return deco
 
-def auto_click_decorate_command(fn, type_handlers: ClickTypeHandlers):
+def auto_click_decorate_command(fn, type_handlers: list[ClickTypeHandlers]):
     """
     Auto-decorate a function with Click parameter decorators based on its signature.
 
@@ -121,10 +126,8 @@ def auto_click_decorate_command(fn, type_handlers: ClickTypeHandlers):
         params = params[1:]  # Skip "self"
 
     for name, param in params:
-        if name.startswith("_"):
-            continue  # We'll handle internals separately.
-        if name in manual_params:
-            continue
+        if name.startswith("_"): continue  # We'll handle internals separately.
+        if name in manual_params: continue
         decorator = _generate_click_decorator(name, param, type_handlers)
         decorators.append(decorator)
 

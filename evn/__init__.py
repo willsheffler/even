@@ -7,6 +7,8 @@ from evn.dev import *
 from evn.tool import *
 # from evn.print import *
 # from evn.decontain import *
+from evn.cli import CLI
+
 from icecream import ic as ic
 ic.configureOutput(includeContext=True, prefix="🍦")
 import builtins

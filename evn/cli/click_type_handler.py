@@ -1,4 +1,43 @@
-# click_type_handler.py
+"""
+click_type_handler.py
+
+Defines the `ClickTypeHandler` interface and the `ClickTypeHandlers` registry, which together
+allow parameter types in the CLI framework to be inferred from Python type hints and optional
+metadata.
+
+Each handler subclass (e.g. BasicIntHandler, BasicBoolHandler) provides conversion logic
+for a specific base type, and supports preprocessing, postprocessing, and failure reporting
+via Click's `BadParameter`.
+
+Key Classes:
+- ClickTypeHandler: abstract base class for param type handlers
+- ClickTypeHandlers: a prioritized set of handlers for resolving annotated Python types
+- MetadataPolicy: enum to control whether metadata is required, forbidden, or optional
+
+Features:
+- Type resolution via `typehint_to_click_paramtype(basetype, metadata)`
+- Automatic fallback if multiple handlers match
+- Metadata-aware filtering and priority-based resolution
+- Memoization via `get_cached_paramtype()` (for performance)
+
+Example (doctestable):
+
+>>> from evn.cli.click_type_handler import ClickTypeHandlers, ClickTypeHandler
+>>> class DummyHandler(ClickTypeHandler):
+...     supported_types = {int: "optional_metadata"}
+...     def convert(self, value, param, ctx): return int(value)
+
+>>> handlers = ClickTypeHandlers()
+>>> handlers.add(DummyHandler())
+>>> param_type = handlers.typehint_to_click_paramtype(int, metadata=None)
+>>> assert param_type.convert("42", None, None) == 42
+
+See Also:
+- evn.cli.basic_click_type_handlers
+- evn.cli.auto_click_decorator
+- test_click_type_handler.py
+"""
+
 import inspect
 import uuid
 import contextlib
@@ -22,6 +61,11 @@ class ClickTypeHandlers(set):
     It can be used to retrieve the appropriate handler for a given type.
     """
 
+    @classmethod
+    def __new__(cls, val=(), *a, **kw):
+        if isinstance(cls, ClickTypeHandlers): return val
+        return super().__new__(val)
+
     def ordered_handlers(self, basetype, metadata):
         [h for h in self if h.metadata_policy(basetype)]
         return list(sorted(self, key=lambda x: x.priority(), reverse=True))
@@ -32,20 +76,20 @@ class ClickTypeHandlers(set):
         if metadata:
             for handler_class in handlers:
                 if handler_class.metadata_policy(basetype) == MetadataPolicy.REQUIRED:
-                    with contextlib.suppress(ValueError):
+                    with contextlib.suppress(HandlerNotFoundError):
                         return get_cached_paramtype(handler_class, basetype, metadata)
         for handler_class in handlers:
             if handler_class.metadata_policy(basetype) == MetadataPolicy.OPTIONAL:
-                with contextlib.suppress(ValueError):
+                with contextlib.suppress(HandlerNotFoundError):
                     return get_cached_paramtype(handler_class, basetype)
         if not metadata:
             for handler_class in handlers:
                 if handler_class.metadata_policy(basetype) == MetadataPolicy.FORBID:
-                    with contextlib.suppress(ValueError):
+                    with contextlib.suppress(HandlerNotFoundError):
                         return get_cached_paramtype(handler_class, basetype)
         if not metadata and basetype in (int, float, str, bool, uuid.UUID):
             return basetype
-        if basetype == inspect._empty:
+        if not metadata and basetype == inspect._empty:
             # Special case for empty annotations (e.g., no type hint).
             return click.ParamType()
         raise HandlerNotFoundError(f'No suitable Click ParamType found for basetype {basetype} with metadata {metadata} using handlers: {handlers}')
@@ -81,10 +125,10 @@ class ClickTypeHandler(click.ParamType):
     def typehint_to_click_paramtype(cls, basetype, metadata):
         """
         Given a type hint (basetype) and optional metadata, return the Click ParamType to use.
-        Default behavior is to return cls if this handler handles the type; otherwise, raises ValueError.
+        Default behavior is to return cls if this handler handles the type; otherwise, raises HandlerNotFoundError.
         """
         if not cls.handles_type(basetype, metadata):
-            raise ValueError(
+            raise HandlerNotFoundError(
                 f"{cls.__class__.__name__} does not handle type {basetype} with metadata {metadata}")
         return cls()
 

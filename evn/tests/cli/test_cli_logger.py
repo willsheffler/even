@@ -2,7 +2,8 @@ from evn.cli.cli_logger import CliLogger
 
 class DummyCLI:
     __log__ = []
-    def get_full_path(self): return "DummyCLI"
+    @classmethod
+    def get_command_path(cls): return "DummyCLI"
 
 def test_basic_logging():
     CliLogger.clear(DummyCLI)
@@ -35,12 +36,10 @@ def test_log_event_context(capsys):
 def test_class_logging_does_not_call_instance_method():
     class DummyWithInstancePath:
         __log__ = []
+        @classmethod
+        def get_command_path(cls): return "DummyWithInstancePath"
         def get_full_path(self): return "fail-if-called"
     # Call logger with class, not instance
     CliLogger.log(DummyWithInstancePath, "hello")
     log = CliLogger.get_log(DummyWithInstancePath)
     assert log[0]["path"] == "DummyWithInstancePath"
-
-def test_path_resolution_from_class():
-    class ResolvedClass: pass
-    assert CliLogger._resolve_path(ResolvedClass) == "ResolvedClass"

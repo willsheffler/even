@@ -1,11 +1,11 @@
 import click
 from evn.cli.cli_registry import CliRegistry
-from evn.cli.cli_metaclass import CliBase
+from evn.cli.cli_metaclass import CLI
 
 def setup_module():
     CliRegistry.reset()
 
-class CLIExample(CliBase):
+class CLIExample(CLI):
     def hi(self, name: str):
         click.echo(f"Hi {name}!")
 

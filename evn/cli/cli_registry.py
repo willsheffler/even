@@ -1,6 +1,37 @@
-# evn/cli/cli_registry.py
+"""
+cli_registry.py
+
+This module provides `CliRegistry`, a global registry of all CLI classes that use
+the `CliMeta` system.
+
+The registry tracks CLI class registration, provides discovery tools, and includes
+reset and diagnostic methods useful for testing and CLI orchestration.
+
+Features:
+- Deduplicated class tracking
+- Reset of singleton/log/config state
+- Root CLI group discovery
+- Registry summary printing
+
+Example (doctestable):
+
+>>> from evn.cli.cli_registry import CliRegistry
+>>> class Dummy:
+...     __group__ = type("Group", (), {"name": "dummy"})()
+...     __parent__ = None
+>>> CliRegistry._cli_classes = [Dummy]
+>>> roots = CliRegistry.get_root_commands()
+>>> assert "dummy" in roots
+
+See Also:
+- cli_metaclass.py
+- cli_command_resolver.py
+- test_cli_registry.py
+"""
+
 from typing import Type, List, Dict
 import click
+import evn
 
 class CliRegistry:
     """
@@ -22,10 +53,10 @@ class CliRegistry:
 
     @classmethod
     def get_root_commands(cls) -> Dict[str, click.Group]:
-        roots = {}
-        for c in cls._cli_classes:
-            if getattr(c, "__parent__", None) is None:
-                roots[c.__group__.name] = c.__group__
+        roots = {
+            c.__group__.name: c.__group__
+            for c in cls._cli_classes if getattr(c, "__parent__") == evn.CLI
+        }
         return roots
 
     @classmethod
@@ -47,6 +78,6 @@ class CliRegistry:
                 print(f"  └── group: {c.__group__.name}")
             if hasattr(c, "__parent__") and c.__parent__:
                 print(f"  └── parent: {c.__parent__.__name__}")
-            if hasattr(c, "click_type_handlers"):
-                print(f"  └── handlers: {[h.__class__.__name__ for h in c.click_type_handlers]}")
+            if hasattr(c, "__type_handlers__"):
+                print(f"  └── handlers: {[h.__class__.__name__ for h in c.__type_handlers__]}")
             print()
