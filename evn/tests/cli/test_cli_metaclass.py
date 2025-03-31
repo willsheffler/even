@@ -11,11 +11,11 @@ runner = CliRunner()
 
 # Define a dummy parent CLI tool.
 class CLIParent(CLI):
-    __type_handlers__ = []  # For testing, no extra handlers needed.
+    __type_handlers__ = ClickTypeHandlers()  # For testing, no extra handlers needed.
 
-    @classmethod
-    def _config(cls):
-        return {'parent_option': 'value_from_parent'}
+    def _callback(self, debug: bool = False):
+        if debug: click.echo('parent debug is on')
+        self._parent_debug = debug
 
     def greet(self, name: str):
         'Command that greets a person.'
@@ -23,11 +23,11 @@ class CLIParent(CLI):
 
 # Define a dummy child CLI tool.
 class CLIChild(CLIParent):
-    __type_handlers__ = []  # Inherit parent's handlers.
+    __type_handlers__ = ClickTypeHandlers()  # Inherit parent's handlers.
 
-    @classmethod
-    def _config(cls):
-        return {'child_option': 'value_from_child'}
+    def _callback(self, debug: bool = False):
+        if debug: click.echo('child debug is on')
+        self._child_debug = debug
 
     def farewell(self, name: str):
         'Command that says goodbye.'
@@ -60,13 +60,29 @@ def test_child_command_registration():
     assert result.exit_code == 0
     assert 'Goodbye, Bob!' in result.output
 
-def test_config_logging():
-    parent_instance = CLIParent()
-    assert hasattr(CLIParent, '__config__')
-    assert CLIParent.__config__ == {'parent_option': 'value_from_parent'}
-    logs = CliLogger.get_log(CLIParent)
-    found = any('Configuration applied' in log.get('message', '') for log in logs)
-    assert found
+def test_child_callback():
+    runner = CliRunner()
+    result = runner.invoke(CLIParent.__group__, ['child', '--debug', 'farewell', 'Bob'])
+    assert result.exit_code == 0
+    assert 'Goodbye, Bob!' in result.output
+    assert 'child debug is on' in result.output
+    assert 'parent debug is on' not in result.output
+
+def test_parent_callback():
+    runner = CliRunner()
+    result = runner.invoke(CLIParent.__group__, ['--debug', 'child', 'farewell', 'Bob'])
+    assert result.exit_code == 0
+    assert 'Goodbye, Bob!' in result.output
+    assert 'child debug is on' not in result.output
+    assert 'parent debug is on' in result.output
+
+def test_parent_and_child_callback():
+    runner = CliRunner()
+    result = runner.invoke(CLIParent.__group__, ['--debug', 'child', '--debug', 'farewell', 'Bob'])
+    assert result.exit_code == 0
+    assert 'Goodbye, Bob!' in result.output
+    assert 'child debug is on' in result.output
+    assert 'parent debug is on' in result.output
 
 def test_instance_logging():
     parent_instance = CLIParent()
@@ -112,16 +128,6 @@ def test_empty_cli_group_creates_successfully():
     assert isinstance(EmptyCLI.__group__, click.Group)
     assert len(EmptyCLI.__group__.commands) == 0
 
-def test_config_is_applied():
-
-    class ConfiguredCLI(CLI):
-
-        @classmethod
-        def _config(cls):
-            return {'hello': 'world'}
-
-    assert ConfiguredCLI.__config__ == {'hello': 'world'}
-
 def test_command_override():
 
     class BaseCLI(CLI):
@@ -145,6 +151,7 @@ def test_command_override():
     assert 'sub' in result.output
 
 def test_command_test_noarg():
+
     class TestCLI(CLI):
 
         def greet(self):

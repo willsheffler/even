@@ -66,8 +66,6 @@ class CliRegistry:
                 del c._instance
             if hasattr(c, "__log__"):
                 c.__log__.clear()
-            if hasattr(c, "__config__"):
-                del c.__config__
 
     @classmethod
     def print_summary(cls) -> None:
