@@ -88,10 +88,14 @@ class CliMeta(type):
         # print(f"[CliMeta] Registered group for {cls.__name__} -> {cls.__group__.name}")
 
         cls.__parent__ = None
-        for base in bases:
+        print(cls.__name__, cls.__bases__)
+        for base in cls.__bases__:
+            if base is object: break  # skip the base object class
+            # print(cls, base)
             assert hasattr(base, "__group__")
             assert not cls.__parent__
             cls.__parent__ = base
+            # print(f"👪 DEBUG: {cls.__name__} has parent {base.__name__} -> {base.__group__.name}")
             base.__group__.add_command(cls.__group__, name=cls.__group__.name)
 
         cls.__all_type_handlers__ = []
@@ -120,6 +124,7 @@ class CliMeta(type):
             cmd = click.Command(name=click_attrs.get("name", method.__name__),
                                 callback=wrapper,
                                 params=click_params,
+                                help=method.__doc__,
                                 **click_attrs)
             cls.__group__.add_command(cmd, name=method.__name__)
 
@@ -171,7 +176,7 @@ class CLI(metaclass=CliMeta):
 
     @classmethod
     def _run(cls):
-        cls._root.__group__()
+        cls._root().__group__()
 
     @classmethod
     def _root(cls):
@@ -196,7 +201,7 @@ def all_command_names(group: click.Group, prefix=""):
         top-level, top-level.subcommand, ...
     """
     commands = []
-    print(group.name, group.commands)
+    # print(group.name, group.commands)
 
     def walk(g: click.Group, path: str):
         # print(g)
@@ -204,6 +209,7 @@ def all_command_names(group: click.Group, prefix=""):
             full_path = f"{path} {name}" if path else name
             commands.append(full_path)
             if isinstance(cmd, click.Group):
+                print(  f"Found group: {full_path}")  # Debug print
                 walk(cmd, full_path)
 
     walk(group, prefix)

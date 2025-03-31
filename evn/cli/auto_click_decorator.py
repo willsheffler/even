@@ -45,6 +45,8 @@ import click
 import typing
 from functools import wraps
 
+from evn.doc.docstring import extract_param_help
+
 from evn.cli.click_type_handler import ClickTypeHandlers, HandlerNotFoundError
 
 def make_hashable(stuff):
@@ -60,7 +62,7 @@ def _extract_annotation(annotation):
             return args[0], make_hashable(args[1:])
     return annotation, None
 
-def _generate_click_decorator(name, param, type_handlers: list[ClickTypeHandlers]):
+def _generate_click_decorator(name, param, type_handlers: list[ClickTypeHandlers], help: str):
     """
     Given a parameter (an inspect.Parameter object) and a list of type handlers,
     generate a Click decorator (click.argument for required parameters, click.option for optional ones)
@@ -88,7 +90,7 @@ def _generate_click_decorator(name, param, type_handlers: list[ClickTypeHandlers
             kwargs["type"] = param_type
         if basetype is bool:
             kwargs["is_flag"] = True
-        deco = click.option(*option_names, **kwargs)
+        deco = click.option(*option_names, help=help, **kwargs)
     # ic(name, type(deco))
     deco
     return deco
@@ -125,10 +127,12 @@ def auto_click_decorate_command(fn, type_handlers: list[ClickTypeHandlers]):
     if params and params[0][0] == "self":
         params = params[1:]  # Skip "self"
 
+    arghelp = extract_param_help(fn.__doc__ or "")
     for name, param in params:
+        # Check if the parameter has a docstring help description.
         if name.startswith("_"): continue  # We'll handle internals separately.
         if name in manual_params: continue
-        decorator = _generate_click_decorator(name, param, type_handlers)
+        decorator = _generate_click_decorator(name, param, type_handlers, help=arghelp.get(name))
         decorators.append(decorator)
 
     # Apply the parameter decorators.
