@@ -3,12 +3,12 @@ import difflib
 import re
 import sys
 
-np = evn.lazyimport('numpy')
 import rich
 from rich.table import Table
 from rich.console import Console
 
-import ipd
+import evn
+np = evn.lazyimport('numpy')
 
 console = Console()
 
@@ -18,12 +18,12 @@ def print(*args, **kw):
 def make_table(thing, precision=3, expand=False, **kw):
     kw['precision'] = precision
     kw['expand'] = expand
-    with ipd.dev.np_printopts(precision=precision, suppress=True):
-        if ipd.homog.is_tensor(thing): return make_table_list(thing, **kw)
-        if isinstance(thing, ipd.Bunch): return make_table_bunch(thing, **kw)
+    with evn.dev.np_printopts(precision=precision, suppress=True):
+        if evn.homog.is_tensor(thing): return make_table_list(thing, **kw)
+        if isinstance(thing, evn.Bunch): return make_table_bunch(thing, **kw)
         if isinstance(thing, dict): return make_table_dict(thing, **kw)
         if isinstance(thing, (list, tuple)): return make_table_list(thing, **kw)
-        xr = ipd.maybeimport('xarray')
+        xr = evn.maybeimport('xarray')
         if xr and isinstance(thing, xr.Dataset): return make_table_dataset(thing, **kw)
         raise TypeError(f'cant make table for {type(thing)}')
 
@@ -34,9 +34,9 @@ def print_table(table, **kw):
     console.print(table)
 
 def make_table_list(lst, title=None, header=[], **kw):
-    t = ipd.kwcall(kw, Table, title=title, show_header=bool(header))
+    t = evn.kwcall(kw, Table, title=title, show_header=bool(header))
     for k in header:
-        ipd.kwcall(kw, t.add_column, k)
+        evn.kwcall(kw, t.add_column, k)
     for v in lst:
         row = [to_renderable(f, **kw) for f in v]
         t.add_row(*row)
@@ -67,10 +67,10 @@ def make_table_dict_of_dict(mapping, title=None, key='key', **kw):
     assert all(isinstance(m, Mapping) for m in mapping.values())
     vals = list(mapping.values())
     assert all(_keys(v, **kw) == _keys(vals[0], **kw) for v in vals)
-    t = ipd.kwcall(kw, Table, title=title)
-    if key: ipd.kwcall(kw, t.add_column, to_renderable(key, **kw))
+    t = evn.kwcall(kw, Table, title=title)
+    if key: evn.kwcall(kw, t.add_column, to_renderable(key, **kw))
     for k in _keys(vals[0], **kw):
-        ipd.kwcall(kw, t.add_column, to_renderable(k, **kw))
+        evn.kwcall(kw, t.add_column, to_renderable(k, **kw))
     for k, submap in _items(mapping):
         row = [k] * bool(key) + [to_renderable(f, **kw) for f in submap.values()]
         t.add_row(*row)
@@ -79,9 +79,9 @@ def make_table_dict_of_dict(mapping, title=None, key='key', **kw):
 def make_table_dict_of_iter(mapping, title=None, **kw):
     vals = list(mapping.values())
     assert all(len(v) == len(vals[0]) for v in vals)
-    t = ipd.kwcall(kw, Table, title=title)
+    t = evn.kwcall(kw, Table, title=title)
     for k in _keys(mapping, **kw):
-        ipd.kwcall(kw, t.add_column, to_renderable(k, **kw))
+        evn.kwcall(kw, t.add_column, to_renderable(k, **kw))
     for i in range(len(vals[0])):
         row = [to_renderable(v[i], **kw) for k, v in _items(mapping)]
         t.add_row(*row)
@@ -89,18 +89,18 @@ def make_table_dict_of_iter(mapping, title=None, **kw):
 
 def make_table_dict_of_any(mapping, title=None, **kw):
     vals = list(mapping.values())
-    t = ipd.kwcall(kw, Table, title=title)
+    t = evn.kwcall(kw, Table, title=title)
     for k in _keys(mapping, **kw):
-        ipd.kwcall(kw, t.add_column, to_renderable(k, **kw))
+        evn.kwcall(kw, t.add_column, to_renderable(k, **kw))
     row = [to_renderable(v, **kw) for k, v in _items(mapping)]
     t.add_row(*row)
     return t
 
 def make_table_dataset(dataset, title=None, **kw):
-    t = ipd.kwcall(kw, Table, title=title)
+    t = evn.kwcall(kw, Table, title=title)
     cols = list(dataset.coords) + list(dataset.keys())
     for c in cols:
-        ipd.kwcall(kw, table.add_column, to_renderable(c, **kw))
+        evn.kwcall(kw, table.add_column, to_renderable(c, **kw))
     for nf in np.unique(dataset['nfold']):
         ds = dataset.sel(index=dataset['nfold'] == nf)
         for i in ds.index:
@@ -118,7 +118,7 @@ def to_renderable(obj, textmap=None, strip=True, nohomog=False, precision=3, **k
     if isinstance(obj, bool): return str(obj)
     if isinstance(obj, int): return f'{obj:4}'
     if isinstance(obj, Table): return obj
-    if nohomog and ipd.homog.is_tensor(obj): obj = obj[..., :3]
+    if nohomog and evn.homog.is_tensor(obj): obj = obj[..., :3]
     s = str(summary(obj))
     assert "'" not in s
     for pattern, replace in textmap.items():
@@ -130,7 +130,7 @@ def to_renderable(obj, textmap=None, strip=True, nohomog=False, precision=3, **k
 # @iterize_on_first_param(allowmap=True)
 def summary(obj) -> str:
     if hasattr(obj, 'summary'): return obj.summary()
-    if ipd.homog.is_tensor(obj): return ipd.homog.tensor_summary(obj)
+    if evn.homog.is_tensor(obj): return evn.homog.tensor_summary(obj)
     if (bs := sys.modules.get('biotite.structure')) and isinstance(obj, bs.AtomArray):
         return f'AtomArray({len(obj)})'
     if isinstance(obj, (list, tuple)): return [summary(o) for o in obj]

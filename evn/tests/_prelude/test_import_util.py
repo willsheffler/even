@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pytest
 
-import ipd
-from ipd import cherry_pick_import, cherry_pick_imports
+import evn
+from evn import cherry_pick_import, cherry_pick_imports
 
 def main():
     with make_temp_package_structure() as tps:
-        ipd.tests.maintest(globals(), fixtures=dict(tmp_package=tps))
+        evn.tests.maintest(globals(), fixtures=dict(tmp_package=tps))
 
 @pytest.fixture(scope='session')
 def tmp_package() -> Generator[Tuple[str, str], None, None]:
@@ -24,7 +24,7 @@ def tmp_package() -> Generator[Tuple[str, str], None, None]:
 def test_cherry_pick_import_variable(tmp_package: Tuple[str, str]) -> None:
     """Test cherry_pick_import with a variable."""
     path, pkg_name = tmp_package
-    ipd.ic('INTEST')
+    evn.ic('INTEST')
     var1 = cherry_pick_import(f"{pkg_name}.module1", "variable1", path=path)
     assert var1 == "module1_var"
     assert f"{pkg_name}.module1" in sys.modules
@@ -150,8 +150,8 @@ def test_circular_imports_simulation(tmp_package: Tuple[str, str]) -> None:
 
 def test_is_installed() -> None:
     """Test is_installed function."""
-    assert ipd.is_installed("os")
-    assert not ipd.is_installed("nonexistent_package")
+    assert evn.is_installed("os")
+    assert not evn.is_installed("nonexistent_package")
 
 @contextlib.contextmanager
 def make_temp_package_structure() -> Generator[Tuple[str, str], None, None]:
@@ -186,7 +186,7 @@ def make_temp_package_structure() -> Generator[Tuple[str, str], None, None]:
         sys.path.insert(0, temp_dir)
         os.chdir(temp_dir)
         assert os.path.exists(f'{temp_dir}/{pkg_name}/__init__.py')
-        ipd.icv(f'{temp_dir}/{pkg_name}/__init__.py')
+        evn.icv(f'{temp_dir}/{pkg_name}/__init__.py')
         assert os.path.exists(f'{temp_dir}/{pkg_name}/module1.py')
         assert os.path.exists(f'{temp_dir}/{pkg_name}/subpkg/__init__.py')
         assert os.path.exists(f'{temp_dir}/{pkg_name}/subpkg/module2.py')

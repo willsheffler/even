@@ -2,36 +2,39 @@ import contextlib
 import hashlib
 import os
 import shutil
+from rapidfuzz import fuzz
 from pathlib import Path
 from typing import Generic, TypeVar, Mapping, Iterable
-from evn.decontain.element_wise import element_wise_operations
+from evn.decontain.item_wise import item_wise_operations
 from evn.decontain.iterize import subscriptable_for_attributes
-
-with contextlib.suppress(ImportError):
-    pass
-
-import evn
+from evn.print import summary
 
 __all__ = ('Bunch', 'bunchify', 'unbunchify', 'make_autosave_hierarchy', 'unmake_autosave_hierarchy')
 
 T = TypeVar('T')
 
-def search(haystack, needle, path='', seenit=None):
+def strmatch(a, b, fuzzy=.2, partial='auto'):
+    if not fuzzy: return a in b
+    func = fuzz.ratio
+    if partial is True or (partial == 'auto' and max(len(a), len(b)) > 10): func = fuzz.partial_ratio
+    return func(a, b) >= 1 - frac
+
+def bunchfind(haystack, needle, fuzzy=0, partial='auto', path='', seenit=None, matcher=fuzz.partial_ratio):
     seenit = seenit or set()
     found = {}
     if id(haystack) in seenit: return found
     seenit.add(id(haystack))
     items = enumerate(haystack)
     if isinstance(haystack, Mapping):
-        found |= {f'{path}{k}': v for k, v in haystack.items() if needle in k}
+        found |= {f'{path}{k}': v for k, v in haystack.items() if strmatch(needle, k, fuzzy, partial)}
         items = haystack.items()
     for k, v in items:
         if isinstance(v, (Mapping, Iterable)):
-            found |= search(v, needle, f"{path}{k}.", seenit)
+            found |= bunchfind(v, needle, fuzzy, partial, f"{path}{k}.", seenit, matcher)
     return found
 
 @subscriptable_for_attributes
-@element_wise_operations
+@item_wise_operations
 class Bunch(dict, Generic[T]):
     """
     a dot-accessable dict subclass with defaultdict and chainmap functionallity
@@ -48,6 +51,7 @@ class Bunch(dict, Generic[T]):
         _autosave=None,
         _autoreload=None,
         _parent=None,
+        _split_space=False,
         **kw,
     ):
         if __arg_or_ns is not None:
@@ -64,6 +68,7 @@ class Bunch(dict, Generic[T]):
         self.__dict__["_special"]["storedefault"] = _storedefault
         self.__dict__["_special"]["autosave"] = str(_autosave) if _autosave else None
         self.__dict__["_special"]["autoreload"] = _autoreload
+        self.__dict__["_special"]["split_space"] = _split_space
         if _autoreload:
             Path(_autoreload).touch()
             self.__dict__['_special']['autoreloadhash'] = hashlib.md5(open(_autoreload,
@@ -75,7 +80,7 @@ class Bunch(dict, Generic[T]):
                 del self[k]
                 # print(f'WARNING {k} is a reserved name for dict, renaming to {k}_')
 
-    search = search
+    _find = bunchfind
 
     def _autoreload_check(self):
         if not self.__dict__['_special']['autoreload']: return
@@ -224,6 +229,12 @@ class Bunch(dict, Generic[T]):
                 return self[k]
 
     def __setitem__(self, k: str, v: T):
+        if ' ' in k and self.__dict__['_special']['split_space']:
+            obj, keys, klast = self, *k.rsplit(maxsplit=1)
+            for k in keys.split():
+                obj[k] = obj = obj[k] if k in obj else Bunch()
+            obj[klast] = v
+            return
         # if k == 'polls':
         # print('set polls trace:')
         # traceback.print_stack()
@@ -359,7 +370,7 @@ class Bunch(dict, Generic[T]):
                 return "Bunch()"
             w = int(min(40, max(len(str(k)) for k in self)))
             for k, v in self.items():
-                s += f'  {k:{f"{w}"}} = {evn.print.summary(v)}{os.linesep}\n'
+                s += f'  {k:{f"{w}"}} = {summary(v)}{os.linesep}\n'
             s += ")"
         return s
 
@@ -369,13 +380,14 @@ class Bunch(dict, Generic[T]):
         def short(thing):
             s = str(thing)
             if len(s) > 80:
-                try:
+                with contextlib.suppress(ImportError):
                     import numpy as np
 
                     if isinstance(thing, np.ndarray):
                         s = f"shape {thing.shape}"
                     else:
                         s = str(s)[:67].replace("\n", "") + "..."
+
             return s
 
         s = "Bunch(" + ", ".join([f"{k}={v}" for k, v in self.items()]) + ")"

@@ -47,13 +47,13 @@ from typing import Mapping, Any, Iterable
 
 import numpy as np
 
-import ipd
+import evn
 
 def NoneFunc():
     """This function does nothing and is used as a default placeholder."""
     pass
 
-def subscriptable_for_attributes(cls: type[ipd.C]) -> type[ipd.C]:
+def subscriptable_for_attributes(cls: type[evn.C]) -> type[evn.C]:
     """Class decorator to enable subscriptable attribute access and enumeration.
 
     This decorator adds support for `__getitem__` and `enumerate` methods to a class
@@ -94,7 +94,7 @@ def subscriptable_for_attributes(cls: type[ipd.C]) -> type[ipd.C]:
     return cls
 
 def iterize_on_first_param(
-    func0: ipd.F = NoneFunc,
+    func0: evn.F = NoneFunc,
     *,
     basetype: 'str|type|tuple[type,...]' = str,
     splitstr=True,
@@ -103,7 +103,7 @@ def iterize_on_first_param(
     asnumpy=False,
     allowmap=False,
     nonempty=False,
-) -> ipd.F:
+) -> evn.F:
     """
     Decorator to vectorize a function over its first parameter.
 
@@ -200,9 +200,9 @@ def iterize_on_first_param(
           of the mapping and return a new mapping.
     """
 
-    def deco(func: ipd.F) -> ipd.F:
+    def deco(func: evn.F) -> evn.F:
 
-        @ipd.wraps(func)
+        @evn.wraps(func)
         def wrapper(arg0, *args, **kw):
             if is_iterizeable(arg0, basetype=basetype, splitstr=splitstr, allowmap=allowmap):
                 if splitstr and isinstance(arg0, str) and ' ' in arg0:
@@ -215,10 +215,10 @@ def iterize_on_first_param(
                     result = [func(a0, *args, **kw) for a0 in arg0]
                     with contextlib.suppress(TypeError, ValueError):
                         resutn = type(arg0)(result)
-                if nonempty and ipd.islist(result): result = list(filter(len, result))
-                if nonempty and ipd.isdict(result): {k:v for k,v in result.items() if len(v)}
-                if asbunch and result and isinstance(ipd.first(result.keys()), str):
-                    result = ipd.Bunch(result)
+                if nonempty and evn.islist(result): result = list(filter(len, result))
+                if nonempty and evn.isdict(result): {k:v for k,v in result.items() if len(v)}
+                if asbunch and result and isinstance(evn.first(result.keys()), str):
+                    result = evn.Bunch(result)
                 if asnumpy:
                     result = np.array(result)
                 return result
@@ -252,9 +252,9 @@ def preserve_random_state(func0=None, seed0=None):
 
     def deco(func):
 
-        @ipd.wraps(func)
+        @evn.wraps(func)
         def wrapper(*args, **kw):
-            with ipd.dev.temporary_random_seed(seed=kw.get('seed', seed0)):
+            with evn.dev.temporary_random_seed(seed=kw.get('seed', seed0)):
                 return func(*args, **kw)
 
         return wrapper
@@ -301,7 +301,7 @@ def safe_lru_cache(func=None, *, maxsize=128):
     def decorator(func):
         cache = functools.lru_cache(maxsize=maxsize)(func)
 
-        @ipd.wraps(func)
+        @evn.wraps(func)
         def wrapper(*args, **kwargs):
             try:
                 hash(args)
@@ -316,7 +316,7 @@ def safe_lru_cache(func=None, *, maxsize=128):
 
 # helper functions
 
-def generic_get_keys(obj, exclude: ipd.FieldSpec = ()):
+def generic_get_keys(obj, exclude: evn.FieldSpec = ()):
     """
     Retrieve keys or indices from an object.
 
@@ -422,7 +422,7 @@ def valid_element_name_thorough(name, exclude=()):
 
 _reserved_element_names = set('mapwise npwise valwise dictwise'.split())
 
-def get_fields(obj, fields: ipd.FieldSpec, exclude: ipd.FieldSpec = ()) -> tuple[Iterable, bool]:
+def get_fields(obj, fields: evn.FieldSpec, exclude: evn.FieldSpec = ()) -> tuple[Iterable, bool]:
     """
     Determine and return the fields from an object.
 
@@ -449,7 +449,7 @@ def get_fields(obj, fields: ipd.FieldSpec, exclude: ipd.FieldSpec = ()) -> tuple
 
     if callable(fields): fields = fields(obj)
     if fields is None: return generic_get_keys(obj, exclude=exclude), True
-    if ' ' in fields: return ipd.cast(str, fields).split(), True
+    if ' ' in fields: return evn.cast(str, fields).split(), True
     if isinstance(fields, str): return [fields], False
     return fields, True
 
@@ -496,7 +496,7 @@ def make_getitem_for_attributes(get=getattr, provide='value') -> 'Any':
     if provide not in ('value', 'item'):
         raise ValueError(f"provide must be 'value' or 'item', not {provide}")
 
-    def getitem_for_attributes(self, field: ipd.FieldSpec, get=get) -> 'Any':
+    def getitem_for_attributes(self, field: evn.FieldSpec, get=get) -> 'Any':
         """Enhanced `__getitem__` method to support attribute access with multiple keys.
 
     If the field is a string containing spaces, it will be split into a list of keys.
@@ -519,12 +519,12 @@ def make_getitem_for_attributes(get=getattr, provide='value') -> 'Any':
             if plural: return tuple(get(self, k) for k in field)
             else: return get(self, field[0])
         if provide == 'item':
-            if plural: return ipd.Bunch((k, get(self, k)) for k in field)
+            if plural: return evn.Bunch((k, get(self, k)) for k in field)
             return (field[0], get(self, field[0]))
 
     return getitem_for_attributes
 
-def generic_enumerate(self, fields: ipd.FieldSpec = None, order=lambda x: x) -> ipd.EnumerIter:
+def generic_enumerate(self, fields: evn.FieldSpec = None, order=lambda x: x) -> evn.EnumerIter:
     """
     Enhanced enumerate method to iterate over multiple attributes simultaneously.
 
@@ -547,7 +547,7 @@ def generic_enumerate(self, fields: ipd.FieldSpec = None, order=lambda x: x) -> 
         >>> a = A()
         >>> list(a.enumerate("x y"))
         [(0, 1, 3), (1, 2, 4)]
-        >>> @ipd.subscriptable_for_attributes
+        >>> @evn.subscriptable_for_attributes
         ... class MyClass:
         ...     def __init__(self):
         ...         self.x = range(5)
@@ -573,10 +573,10 @@ def generic_enumerate(self, fields: ipd.FieldSpec = None, order=lambda x: x) -> 
 
 def generic_groupby(
     self,
-    groupby: ipd.FieldSpec,
-    fields: ipd.FieldSpec = None,
+    groupby: evn.FieldSpec,
+    fields: evn.FieldSpec = None,
     convert=None,
-) -> ipd.EnumerListIter:
+) -> evn.EnumerListIter:
     """
     Group object attributes by a specified key.
 
@@ -618,7 +618,7 @@ def generic_groupby(
         vals = zip(*vals)
         if convert: vals = map(convert, vals)
         if splat: yield group, *vals
-        else: yield group, ipd.Bunch(zip(fields, vals))
+        else: yield group, evn.Bunch(zip(fields, vals))
 
 def is_fuzzy_match(sub, string):
     """

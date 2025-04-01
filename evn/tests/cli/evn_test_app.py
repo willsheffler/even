@@ -1,7 +1,7 @@
 from evn import CLI
 
 # === Root CLI scaffold using inheritance-based hierarchy ===
-class root(CLI):
+class TestCli(CLI):
     """
     Main entry point for the EVN developer workflow CLI.
     """
@@ -23,7 +23,7 @@ class root(CLI):
         return dict(help_option_names=['-h', '--help'])
 
 
-class dev(root):
+class dev(TestCli):
     "Development: edit, format, test a single file or unit."
     pass
 
@@ -91,7 +91,7 @@ class doc(dev):
         print(f"[dev.doc.build] Build docs (open_browser={open_browser})")
 
 
-class doccheck(root):
+class doccheck(TestCli):
     "Doccheck: audit project documentation and doctests."
 
     @classmethod
@@ -119,7 +119,7 @@ class missing(doccheck):
         print(f"[doccheck.missing.list] List missing docs (json={json})")
 
 
-class qa(root):
+class qa(TestCli):
     "QA: prepare commits, PRs, and run test matrices."
     pass
 
@@ -146,7 +146,7 @@ class review(qa):
         print(f"[qa.review.changes] Show changes (summary={summary})")
 
 
-class run(root):
+class run(TestCli):
     "Run: dispatch actions, scripts, or simulate GH actions."
     pass
 
@@ -170,7 +170,7 @@ class script(run):
         print(f"[run.script.shell] Run shell: {cmd}")
 
 
-class buildtools(root):
+class buildtools(TestCli):
     "Build: C++ and native build tasks."
     pass
 
@@ -187,11 +187,11 @@ class clean(buildtools):
         print(f"[build.clean.all] Clean all (verbose={verbose})")
 
 
-class proj(root):
+class proj(TestCli):
     "Project structure, tagging, and discovery."
 
     def root(self, verbose: bool = False):
-        print(f"[proj.root] Project root (verbose={verbose})")
+        print(f"[proj.TestCli] Project TestCli (verbose={verbose})")
 
     def info(self):
         print("[proj.info] Project metadata")
@@ -201,6 +201,6 @@ class proj(root):
 
 
 if __name__ == '__main__':
-    # for click_path in root._walk_click():
+    # for click_path in TestCli._walk_click():
         # print(click_path)
-    root._run()
+    TestCli._run()

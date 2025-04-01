@@ -7,9 +7,9 @@ import pytest
 import yaml
 
 import evn
-from evn.bunch import *
+from evn.decontain.bunch import bunchfind, Bunch, make_autosave_hierarchy
 
-config_test = evn.Bunch(
+config_test = Bunch(
     re_only=[
         # 'test_ewise_equal'
     ],
@@ -28,6 +28,14 @@ def assert_saved_ok(b):
     with open(b._special['autosave']) as inp:
         b2 = make_autosave_hierarchy(yaml.load(inp, yaml.Loader))
     assert b == b2
+
+def test_bunch_split_space():
+    test = Bunch(a='a',_split_space=True)
+    test['foo bar baz'] = 8
+    test['foo bar2 baz'] = 8
+    print(test)
+    assert test.foo.bar.baz == 8
+    assert test.foo.bar2.baz == 8
 
 def test_autosave(tmpdir):  # sourcery skip: merge-list-append, merge-set-add
     fname = f'{tmpdir}/test.yaml'
@@ -315,35 +323,33 @@ def test_bunch_zip_order():
 
 def test_search_basic_match():
     data = Bunch({'name': 'Alice', 'age': 30, 'location': 'New York'})
-    result = data.search('name')
+    result = bunchfind(data, 'name')
     assert result == {'name': 'Alice'}
 
 def test_search_nested_match():
     data = {'person': {'name': 'Bob', 'details': {'age': 25, 'location_name': 'Los Angeles'}}}
-    result = evn.bunch.search(data, 'name')
-    evn.icv(result)
+    result = bunchfind(data, 'name')
     assert result == {'person.name': 'Bob', 'person.details.location_name': 'Los Angeles'}
 
 def test_search_nested_match_recursive():
     data = {'person': {'name': 'Bob', 'details': {'age': 25, 'location_name': 'Los Angeles'}}}
     data['self'] = data
-    result = evn.bunch.search(data, 'name')
-    evn.icv(result)
+    result = bunchfind(data, 'name')
     assert result == {'person.name': 'Bob', 'person.details.location_name': 'Los Angeles'}
 
 def test_search_no_match():
     data = Bunch({'name': 'Charlie', 'age': 40})
-    result = evn.bunch.search(data, 'location')
+    result = bunchfind(data, 'location')
     assert result == {}
 
 def test_search_partial_key_match():
     data = {'username': 'admin', 'user_id': 1234, 'details': {'profile_name': 'Admin'}}
-    result = evn.bunch.search(data, 'name')
+    result = bunchfind(data, 'name')
     assert result == {'username': 'admin', 'details.profile_name': 'Admin'}
 
 def test_search_empty_dict():
     data = Bunch()
-    result = evn.bunch.search(data, 'key')
+    result = bunchfind(data, 'key')
     assert result == {}
 
 def test_bunch_underscore():

@@ -3,14 +3,14 @@ from collections import namedtuple
 import unittest
 import pytest
 
-import ipd
+import evn
 
 def main():
-    ipd.tests.maintest(namespace=globals())
+    evn.tests.maintest(namespace=globals())
 
 def test_iterize():
 
-    @ipd.dev.iterize_on_first_param
+    @evn.dev.iterize_on_first_param
     def Foo(a):
         return a * a
 
@@ -19,19 +19,19 @@ def test_iterize():
 
 def test_iterize_basetype():
 
-    @ipd.dev.iterize_on_first_param(basetype=str)
+    @evn.dev.iterize_on_first_param(basetype=str)
     def bar(a):
         return 2 * a
 
     assert bar('foo') == 'foofoo'
     assert bar(['a', 'b']) == ['aa', 'bb']
-    ipd.icv(bar('a b'))
+    evn.icv(bar('a b'))
     assert bar('a b') == ['aa', 'bb']
     assert bar(1.1) == 2.2
 
 def test_iterize_asdict():
 
-    @ipd.dev.iterize_on_first_param(basetype=str, asdict=True)
+    @evn.dev.iterize_on_first_param(basetype=str, asdict=True)
     def baz(a):
         return 2 * a
 
@@ -42,12 +42,12 @@ def test_iterize_asdict():
 
 def test_iterize_asbunch():
 
-    @ipd.dev.iterize_on_first_param(basetype=str, asbunch=True)
+    @evn.dev.iterize_on_first_param(basetype=str, asbunch=True)
     def baz(a):
         return 2 * a
 
     assert baz('foo') == 'foofoo'
-    assert isinstance(baz(['a', 'b']), ipd.Bunch)
+    assert isinstance(baz(['a', 'b']), evn.Bunch)
     assert baz(['a', 'b']) == dict(a='aa', b='bb')
     assert baz('a b') == dict(a='aa', b='bb')
     assert baz(1.1) == 2.2
@@ -55,14 +55,14 @@ def test_iterize_asbunch():
 
 def test_iterize_allowmap():
 
-    @ipd.dev.iterize_on_first_param(basetype=str, asbunch=True)
+    @evn.dev.iterize_on_first_param(basetype=str, asbunch=True)
     def foo(a):
         return 2 * a
 
     with pytest.raises(TypeError):
         foo(dict(a=1, b=2))
 
-    @ipd.dev.iterize_on_first_param(basetype=str, asbunch=True, allowmap=True)
+    @evn.dev.iterize_on_first_param(basetype=str, asbunch=True, allowmap=True)
     def bar(a):
         return 2 * a
 
@@ -73,14 +73,14 @@ def test_iterize_basetype_string():
     class mylist(list):
         pass
 
-    @ipd.dev.iterize_on_first_param(basetype='str')
+    @evn.dev.iterize_on_first_param(basetype='str')
     def foo(a):
         return 2 * a
 
     with pytest.raises(TypeError):
         foo(dict(a=1, b=2))
 
-    @ipd.dev.iterize_on_first_param(basetype='mylist')
+    @evn.dev.iterize_on_first_param(basetype='mylist')
     def bar(a):
         return len(a)
 
@@ -96,39 +96,39 @@ class CustomIterable(namedtuple('CustomIterable', ['items'])):
         return iter(self.items)
 
 class TestIterizeOnFirstParam(unittest.TestCase):
-    """Test suite for the ipd.dev.iterize_on_first_param decorator."""
+    """Test suite for the evn.dev.iterize_on_first_param decorator."""
 
     def setUp(self):
         """Set up test functions with the decorator applied in different ways."""
         # Basic decorator without arguments
-        @ipd.dev.iterize_on_first_param
+        @evn.dev.iterize_on_first_param
         def square(x):
             return x * x
 
         self.square = square
 
-        @ipd.dev.iterize_on_first_param
+        @evn.dev.iterize_on_first_param
         def multiply(x, y):
             return x * y
 
         self.multiply = multiply
 
         # Decorator with basetype=str
-        @ipd.dev.iterize_on_first_param(basetype=str)
+        @evn.dev.iterize_on_first_param(basetype=str)
         def get_length(x):
             return len(x)
 
         self.get_length = get_length
 
         # Decorator with basetype=str
-        @ipd.dev.iterize_on_first_param(basetype=str, nonempty=True)
+        @evn.dev.iterize_on_first_param(basetype=str, nonempty=True)
         def remove_first(x):
             return x[1:] if x else ''
 
         self.remove_first = remove_first
 
         # Using the pre-configured path decorator
-        @ipd.dev.iterize_on_first_param_path
+        @evn.dev.iterize_on_first_param_path
         def process_path(path):
             return f"Processing {path}"
 
@@ -205,7 +205,7 @@ class TestIterizeOnFirstParam(unittest.TestCase):
     def test_nested_iterables(self):
         """Test handling of nested iterables."""
         # Define a custom function that handles lists for this test
-        @ipd.dev.iterize_on_first_param
+        @evn.dev.iterize_on_first_param
         def sum_list(x):
             return sum(x) if isinstance(x, list) else x
 
@@ -213,7 +213,7 @@ class TestIterizeOnFirstParam(unittest.TestCase):
 
     def test_decorator_preserves_metadata(self):
         """Test that the decorator preserves function metadata."""
-        decorated = ipd.dev.iterize_on_first_param(self.original_func)
+        decorated = evn.dev.iterize_on_first_param(self.original_func)
 
         assert decorated.__name__ == "original_func"
         assert decorated.__doc__ == "Test docstring."
@@ -237,7 +237,7 @@ class TestIterizeOnFirstParam(unittest.TestCase):
         assert self.remove_first(self.string_list + ['a', '']) == ["ello", "orld"]
 
 class TestIterizeableFunction(unittest.TestCase):
-    """Test suite for the ipd.dev.is_iterizeable helper function."""
+    """Test suite for the evn.dev.is_iterizeable helper function."""
 
     def setUp(self):
         """Set up test data."""
@@ -247,29 +247,29 @@ class TestIterizeableFunction(unittest.TestCase):
         self.path_obj = Path("test.txt")
 
     def test_basic_iterizeable(self):
-        """Test basic ipd.dev.is_iterizeable function without basetype."""
-        assert ipd.dev.is_iterizeable(self.list_data) is True
-        assert ipd.dev.is_iterizeable(self.string) is False
-        assert ipd.dev.is_iterizeable(self.string, basetype=None) is True  # String is iterable
-        assert ipd.dev.is_iterizeable(self.integer) is False
+        """Test basic evn.dev.is_iterizeable function without basetype."""
+        assert evn.dev.is_iterizeable(self.list_data) is True
+        assert evn.dev.is_iterizeable(self.string) is False
+        assert evn.dev.is_iterizeable(self.string, basetype=None) is True  # String is iterable
+        assert evn.dev.is_iterizeable(self.integer) is False
 
     def test_iterizeable_with_basetype(self):
-        """Test ipd.dev.is_iterizeable function with basetype parameter."""
+        """Test evn.dev.is_iterizeable function with basetype parameter."""
         # String should not be considered iterable when basetype includes str
-        assert ipd.dev.is_iterizeable(self.string, basetype=str) is False
-        assert ipd.dev.is_iterizeable(self.list_data, basetype=str) is True
+        assert evn.dev.is_iterizeable(self.string, basetype=str) is False
+        assert evn.dev.is_iterizeable(self.list_data, basetype=str) is True
 
         # Path should not be considered iterable when basetype includes Path
-        assert ipd.dev.is_iterizeable(self.path_obj, basetype=Path) is False
+        assert evn.dev.is_iterizeable(self.path_obj, basetype=Path) is False
 
         # Multiple basetypes
-        assert ipd.dev.is_iterizeable(self.string, basetype=(str, Path)) is False
-        assert ipd.dev.is_iterizeable(self.path_obj, basetype=(str, Path)) is False
-        assert ipd.dev.is_iterizeable(self.list_data, basetype=(str, Path)) is True
+        assert evn.dev.is_iterizeable(self.string, basetype=(str, Path)) is False
+        assert evn.dev.is_iterizeable(self.path_obj, basetype=(str, Path)) is False
+        assert evn.dev.is_iterizeable(self.list_data, basetype=(str, Path)) is True
 
 def test_subscriptable_for_attributes__getitem__():
 
-    @ipd.subscriptable_for_attributes
+    @evn.subscriptable_for_attributes
     class Foo:
         a, b, c = 6, 7, 8
 
@@ -278,7 +278,7 @@ def test_subscriptable_for_attributes__getitem__():
 
 def test_subscriptable_for_attributes_enumerate():
 
-    @ipd.subscriptable_for_attributes
+    @evn.subscriptable_for_attributes
     class Foo:
 
         def __init__(self):
@@ -290,7 +290,7 @@ def test_subscriptable_for_attributes_enumerate():
 
 def test_subscriptable_for_attributes_enumerate_noarg():
 
-    @ipd.subscriptable_for_attributes
+    @evn.subscriptable_for_attributes
     class Foo:
 
         def __init__(self):
@@ -302,7 +302,7 @@ def test_subscriptable_for_attributes_enumerate_noarg():
 
 def test_subscriptable_for_attributes_groupby():
 
-    @ipd.subscriptable_for_attributes
+    @evn.subscriptable_for_attributes
     class Foo:
 
         def __init__(self):
@@ -310,16 +310,16 @@ def test_subscriptable_for_attributes_groupby():
 
     foo = Foo()
     for g, a, b, c in foo.groupby('group', 'a b c'):
-        ipd.icv(g, a, b, c)
+        evn.icv(g, a, b, c)
     v = list(foo.groupby('group', 'a c'))
     assert v == [('a', (0, 1, 2), (10, 11, 12)), ('b', (3, 4, 5), (13, 14, 15))]
     v = list(foo.groupby('group'))
-    assert v == [('a', ipd.Bunch(a=(0, 1, 2), b=(1, 2, 3), c=(10, 11, 12))),
-                 ('b', ipd.Bunch(a=(3, 4, 5), b=(4, 5, 6), c=(13, 14, 15)))]
+    assert v == [('a', evn.Bunch(a=(0, 1, 2), b=(1, 2, 3), c=(10, 11, 12))),
+                 ('b', evn.Bunch(a=(3, 4, 5), b=(4, 5, 6), c=(13, 14, 15)))]
 
 def test_subscriptable_for_attributes_fzf():
 
-    @ipd.subscriptable_for_attributes
+    @evn.subscriptable_for_attributes
     class Foo:
 
         def __init__(self):
@@ -346,7 +346,7 @@ def test_subscriptable_for_attributes_fzf():
 
 def test_getitem_picklable():
 
-    @ipd.subscriptable_for_attributes
+    @evn.subscriptable_for_attributes
     class Foo:
 
         def __init__(self):
@@ -358,7 +358,7 @@ def test_getitem_picklable():
 def test_safe_lru_cache():
     ncompute = 0
 
-    @ipd.dev.safe_lru_cache(maxsize=32)
+    @evn.dev.safe_lru_cache(maxsize=32)
     def example(x):
         nonlocal ncompute
         ncompute += 1
@@ -373,7 +373,7 @@ def test_safe_lru_cache():
 def test_safe_lru_cache_noarg():
     ncompute = 0
 
-    @ipd.dev.safe_lru_cache
+    @evn.dev.safe_lru_cache
     def example(x):
         nonlocal ncompute
         ncompute += 1
@@ -387,7 +387,7 @@ def test_safe_lru_cache_noarg():
 
 def test_is_safe_lru_cache_necessary():
 
-    @ipd.ft.lru_cache
+    @evn.ft.lru_cache
     def example(x):
         return x * 2
 

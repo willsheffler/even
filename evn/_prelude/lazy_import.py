@@ -1,3 +1,4 @@
+import contextlib
 import subprocess
 import sys
 from importlib import import_module
@@ -29,10 +30,10 @@ def lazyimports(
     return modules
 
 def timed_import_module(name):
-    import ipd
-    ipd.dev.global_timer.checkpoint(interject=True)
+    import evn
+    evn.dev.global_timer.checkpoint(interject=True)
     mod = import_module(name)
-    ipd.dev.global_timer.checkpoint(f'LAZY import {name}')
+    evn.dev.global_timer.checkpoint(f'LAZY import {name}')
     return mod
 
 def lazyimport(name: str,
@@ -65,14 +66,15 @@ class _LazyModule(ModuleType):
     # __slots__ = ('_lazymodule_name', '_lazymodule_package', '_lazymodule_pip', '_lazymodule_mamba', '_lazymodule_channels', '_lazymodule_callerinfo', '_lazymodule_warn')
 
     def __init__(self, name: str, package: str = '', pip=False, mamba=False, channels='', warn=True):
-        from ipd.dev.code.inspect import caller_info
         self._lazymodule_name = name
         self._lazymodule_package = package or name.split('.', maxsplit=1)[0]
         self._lazymodule_pip = pip
         self._lazymodule_mamba = mamba
         self._lazymodule_channels = channels
-        self._lazymodule_callerinfo = caller_info(excludefiles=[__file__])
         self._lazymodule_warn = warn
+        with contextlib.suppress(ImportError, AttributeError):
+            from evn.meta import caller_info
+            self._lazymodule_callerinfo = caller_info(excludefiles=[__file__])
         # if name not in _DEBUG_ALLOW_LAZY_IMPORT:
         #     self._lazymodule_now()
         #     _all_skipped_lazy_imports.add(name)
@@ -81,11 +83,14 @@ class _LazyModule(ModuleType):
         """Import the module _lazymodule_import_now."""
         try:
             return timed_import_module(self._lazymodule_name)
-        except ImportError:
+        except ImportError as e:
             if 'doctest' in sys.modules: return FalseModule(self._lazymodule_name)
-            ci = self._lazymodule_callerinfo
-            callinfo = f'\n  File "{ci.filename}", line {ci.lineno}\n    {ci.code}'
-            raise LazyImportError(callinfo)
+            if hasattr('_lazymodule_callerinfo', self):
+                ci = self._lazymodule_callerinfo
+                callinfo = f'\n  File "{ci.filename}", line {ci.lineno}\n    {ci.code}'
+                raise LazyImportError(callinfo) from e
+            else:
+                raise e
 
     def _try_mamba_install(self):
         mamba = sys.executable.replace('/bin/python', '')
@@ -156,47 +161,47 @@ _all_skipped_lazy_imports = set()
 _skip_global_install = False
 _warned = set()
 
-# from ipd.dev.contexts import onexit
+# from evn.dev.contexts import onexit
 # @onexit
 # def print_skipped():
 #     if _all_skipped_lazy_imports:
 #         print(_all_skipped_lazy_imports)
 
 # _DEBUG_ALLOW_LAZY_IMPORT = [
-#     'ipd.crud',
-#     'ipd.dev.cuda',
-#     'ipd.observer',
-#     'ipd.dev.qt',
-#     'ipd.dev.sieve',
-#     'ipd.fit',
-#     'ipd.motif',
-#     'ipd.pdb',
-#     'ipd.samp',
-#     'ipd.samp.sampling_cuda',
-#     'ipd.protocol',
-#     'ipd.sym',
-#     'ipd.tests',
-#     'ipd.tools',
-#     'ipd.viz',
-#     'ipd.viz.viz_pdb',
-#     'ipd.voxel',
+#     'evn.crud',
+#     'evn.dev.cuda',
+#     'evn.observer',
+#     'evn.dev.qt',
+#     'evn.dev.sieve',
+#     'evn.fit',
+#     'evn.motif',
+#     'evn.pdb',
+#     'evn.samp',
+#     'evn.samp.sampling_cuda',
+#     'evn.protocol',
+#     'evn.sym',
+#     'evn.tests',
+#     'evn.tools',
+#     'evn.viz',
+#     'evn.viz.viz_pdb',
+#     'evn.voxel',
 #     'pymol',
 #     'pymol.cgo',
 #     'pymol.cmd',
 #     'sqlmodel',
 #     'fastapi',
 #     'torch',
-#     'ipd.sym.high_t',
+#     'evn.sym.high_t',
 #     'omegaconf',
-#     'ipd.dev.cli',
+#     'evn.dev.cli',
 #     'hydra',
-#     'ipd.sym.sym_tensor',
-#     'ipd.homog',
-#     'ipd.sym.xtal',
+#     'evn.sym.sym_tensor',
+#     'evn.homog',
+#     'evn.sym.xtal',
 #     'RestricetedPython',
-#     'ipd.homog.thgeom',
-#     'ipd.homog.quat',
-#     'ipd.sym.helix',
-#     'ipd.dev.testing',
-#     'ipd.tests.sym',
+#     'evn.homog.thgeom',
+#     'evn.homog.quat',
+#     'evn.sym.helix',
+#     'evn.dev.testing',
+#     'evn.tests.sym',
 # ]

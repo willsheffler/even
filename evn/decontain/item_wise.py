@@ -14,7 +14,7 @@ import numpy as np
 
 import evn
 
-generic_get_items = evn.cherry_pick_import('evn.dev.decorators.generic_get_items')
+generic_get_items = evn.cherry_pick_import('evn.decontain.iterize.generic_get_items')
 
 def get_available_result_types():
     return dict(

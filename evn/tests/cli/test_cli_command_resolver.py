@@ -19,7 +19,7 @@ class CLITestSub(CLITestTop):
 
 def test_walk_commands_finds_all():
     paths = [p for p, _ in walk_commands(CLITestTop)]
-    print("\nwalked command paths:", paths)
+    # print("\nwalked command paths:", paths)
     assert "<exe> testtop greet" in paths
     assert "<exe> testtop testsub hello" in paths
 
@@ -31,7 +31,7 @@ def test_find_command_by_path():
 
 def test_get_all_cli_paths_contains_expected():
     paths = get_all_cli_paths()
-    print("all CLI paths:", paths)
+    # print("all CLI paths:", paths)
     assert any("greet" in p for p in paths)
     assert any("testsub hello" in p for p in paths)
 

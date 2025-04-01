@@ -78,7 +78,6 @@ import re
 import functools
 import inspect
 import operator
-import toolz
 import sys
 
 import evn
@@ -191,8 +190,6 @@ def kwcall(kw: evn.KW, func: F, *a: P.args, **kwargs: P.kwargs) -> R:
         kwcheck: The underlying function used to filter keyword arguments.
     """
     return func(*a, **kwcheck(kw | kwargs, func))
-
-kwcurry = toolz.curry(kwcall)
 
 def kwcheck(kw: evn.KW, func=None, checktypos=True) -> evn.KW:
     """

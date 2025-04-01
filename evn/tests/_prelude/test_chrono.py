@@ -2,12 +2,12 @@ import statistics
 import pytest
 import time
 import random
-from ipd._prelude.chrono import Chrono, chrono, chrono_class, checkpoint
-# from ipd.dynamic_float_array import DynamicFloatArray
+from evn._prelude.chrono import Chrono, chrono, chrono_class, checkpoint
+# from evn.dynamic_float_array import DynamicFloatArray
 
-import ipd
+import evn
 
-config_test = ipd.Bunch(
+config_test = evn.Bunch(
     re_only=[
         #
     ],
@@ -17,7 +17,7 @@ config_test = ipd.Bunch(
 )
 
 def main():
-    ipd.tests.maintest(
+    evn.tests.maintest(
         namespace=globals(),
         config=config_test,
         verbose=1,
@@ -71,14 +71,14 @@ class TestClass:
 
 @pytest.mark.xfail
 def test_chrono_class():
-    ipd.global_chrono = Chrono()
+    evn.global_chrono = Chrono()
     instance = TestClass()
 
     instance.method1()
     instance.method2()
     list(instance.generator())
 
-    report = ipd.global_chrono.report_dict()
+    report = evn.global_chrono.report_dict()
 
     for method in instance.runtime:
         recorded_time = sum(instance.runtime[method])
@@ -94,7 +94,7 @@ def hypothesis_test_chrono_class():
                  min_size=5,
                  max_size=10))
     def run_test(call_sequence):
-        ipd.global_chrono = Chrono(start=True, use_cython=random.choice([True, False]))
+        evn.global_chrono = Chrono(start=True, use_cython=random.choice([True, False]))
         instance = TestClass()
 
         for method, depth in call_sequence:
@@ -103,8 +103,8 @@ def hypothesis_test_chrono_class():
             else:
                 getattr(instance, method)()
 
-        ipd.global_chrono.stop()
-        report = ipd.global_chrono.report_dict()
+        evn.global_chrono.stop()
+        report = evn.global_chrono.report_dict()
         for method in instance.runtime:
             recorded_time = sum(instance.runtime[method])
             chrono_time = report.get(f"test_chrono_class.<locals>.TestClass.{method}", 0)
@@ -120,7 +120,7 @@ def test_chrono_func():
         time.sleep(0.001)
 
     foo()
-    assert 'test_chrono_func.<locals>.foo' in ipd.global_chrono.checkpoints
+    assert 'test_chrono_func.<locals>.foo' in evn.global_chrono.checkpoints
 
 def test_context():
     with Chrono() as t:
@@ -177,7 +177,7 @@ def bbbb(**kw):
     areport = t.report(printme=False)
 
     t = Chrono()
-    kw = ipd.Bunch(chrono=t)
+    kw = evn.Bunch(chrono=t)
     checkpoint('label', chrono=t)
     bbbb(**kw)
     breport = t.report(printme=False)

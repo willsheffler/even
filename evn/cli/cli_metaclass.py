@@ -175,10 +175,10 @@ class CLI(metaclass=CliMeta):
         return cls
 
     @classmethod
-    def _walk_click(cls):
-        return all_command_names(cls.__group__)
+    def _walk_click(cls, visitor=lambda *a: None):
+        return walk_click_group(cls.__group__, visitor)
 
-def all_command_names(group: click.Group):
+def walk_click_group(group: click.Group = CLI.__group__, visitor=lambda *a: None):
     """
     Recursively prints all command names in a Click group as a comma-separated list.
 
@@ -187,28 +187,23 @@ def all_command_names(group: click.Group):
         prefix (str): Internal use for recursive path tracking.
 
     Example:
-        >>> all_command_names(cli)
+        >>> walk_click_group(cli)
         top-level, top-level.subcommand, ...
     """
     commands = []
-
-    # print(group.name, group.commands)
-
     def walk(g: click.Group, path: str = ''):
         path = path or group.name
+        visitor(g, path)
         for name, cmd in g.commands.items():
             full_path = f"{path} {name}" if path else name
-            if isinstance(cmd, click.Group):
-                # print(  f"Found group: {full_path}")  # Debug print
-                walk(cmd, full_path)
-            else:
-                commands.append(full_path)
-
+            if isinstance(cmd, click.Group): walk(cmd, full_path)
+            else: commands.append(full_path)
     walk(group)
     return commands
 
 def cls_to_instance_method(cls):
     """Assumes cls is a singleton, or stateless, or else user knows what they is doing..."""
+
     def deco(func):
 
         @functools.wraps(func)

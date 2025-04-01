@@ -1,7 +1,7 @@
 {
     "venvPath": "/home/sheffler/sw/MambaForge/envs",
     "venv": "rfdsym312",
-    // "venvPath": "/home/sheffler/rfd/lib/ipd",
+    // "venvPath": "/home/sheffler/rfd/lib/evn",
     // "venv": ".venv",
     "defineConstant": { "DEBUG": true },
     "typeCheckingMode": "standard",

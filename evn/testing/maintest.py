@@ -4,11 +4,11 @@ import tempfile
 
 import pytest
 
-import ipd
+import evn
 
 T = typing.TypeVar('T')
 
-class TestConfig(ipd.Bunch):
+class TestConfig(evn.Bunch):
 
     def __init__(self, *a, **kw):
         super().__init__(self, *a, **kw)
@@ -20,18 +20,18 @@ class TestConfig(ipd.Bunch):
         self.fixtures = self.get('fixtures', {})
         self.setup = self.get('setup', lambda: None)
         self.funcsetup = self.get('funcsetup', lambda: None)
-        self.context = self.get('context', ipd.dev.nocontext)
+        self.context = self.get('context', evn.dev.nocontext)
         self.use_test_classes = self.get('use_test_classes', True)
         self.dryrun = self.get('dryrun', False)
 
     def detect_fixtures(self, namespace):
-        if not ipd.ismap(namespace): namespace = vars(namespace)
+        if not evn.ismap(namespace): namespace = vars(namespace)
         for name, obj in namespace.items():
             if callable(obj) and hasattr(obj, '_pytestfixturefunction'):
                 assert name not in self.fixtures
                 self.fixtures[name] = obj.__wrapped__()
 
-class TestResult(ipd.Bunch):
+class TestResult(evn.Bunch):
 
     def __init__(self, *a, **kw):
         super().__init__(self, *a, **kw)
@@ -39,34 +39,34 @@ class TestResult(ipd.Bunch):
             setattr(self, attr, [])
 
 def _test_func_ok(name, obj):
-    return name.startswith('test_') and callable(obj) and ipd.dev.no_pytest_skip(obj)
+    return name.startswith('test_') and callable(obj) and evn.dev.no_pytest_skip(obj)
 
 def _test_class_ok(name, obj):
     return name.startswith('Test') and isinstance(obj, type) and not hasattr(obj, '__unittest_skip__')
 
-def maintest(namespace, config=ipd.Bunch(), **kw):
+def maintest(namespace, config=evn.Bunch(), **kw):
     orig = namespace
-    if not ipd.ismap(namespace): namespace = vars(namespace)
+    if not evn.ismap(namespace): namespace = vars(namespace)
     if '__file__' in namespace:
         print(f'maintest "{namespace["__file__"]}":', flush=True)
     else:
         print(f'maintest "{orig}":', flush=True)
-    ipd.dev.onexit(ipd.dev.global_timer.report, timecut=0.01, spacer=1)
+    evn.dev.onexit(evn.dev.global_timer.report, timecut=0.01, spacer=1)
     config = TestConfig(**config, **kw)
     config.detect_fixtures(namespace)
-    ipd.kwcall(config, ipd.dev.filter_namespace_funcs, namespace)
-    timed = ipd.dev.timed if config.timed else lambda f: f
+    evn.kwcall(config, evn.dev.filter_namespace_funcs, namespace)
+    timed = evn.dev.timed if config.timed else lambda f: f
     test_suites, test_funcs = [], []
     for name, obj in namespace.items():
         if _test_class_ok(name, obj) and config.use_test_classes:
             test_suites.append((name, timed(obj)))
         elif _test_func_ok(name, obj):
             test_funcs.append((name, timed(obj)))
-    ipd.dev.global_timer.checkpoint('maintest')
+    evn.dev.global_timer.checkpoint('maintest')
     result = TestResult()
     with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = ipd.Path(tmpdir)
-        ipd.kwcall(config.fixtures, config.setup)
+        tmpdir = evn.Path(tmpdir)
+        evn.kwcall(config.fixtures, config.setup)
         config.fixtures['tmpdir'] = str(tmpdir)
         config.fixtures['tmp_path'] = tmpdir
 
@@ -76,7 +76,7 @@ def maintest(namespace, config=ipd.Bunch(), **kw):
         for clsname, Suite in test_suites:
             suite = Suite()
             print(f'{f" Suite: {clsname} ":=^80}', flush=True)
-            test_methods = ipd.dev.filter_namespace_funcs(vars(namespace[clsname]))
+            test_methods = evn.dev.filter_namespace_funcs(vars(namespace[clsname]))
             test_methods = {k: v for k, v in test_methods.items() if _test_func_ok(k, v)}
             getattr(suite, 'setUp', lambda: None)()
             for name in test_methods:
@@ -92,7 +92,7 @@ def maintest(namespace, config=ipd.Bunch(), **kw):
     return result
 
 def _maintest_run_maybe_parametrized_func(name, func, result, config, kw):
-    names, values = ipd.dev.get_pytest_params(func) or ((), [()])
+    names, values = evn.dev.get_pytest_params(func) or ((), [()])
     for val in values:
         if len(names) == 1 and not isinstance(val, (list, tuple)): val = [val]
         paramkw = kw | dict(zip(names, val))
@@ -101,17 +101,17 @@ def _maintest_run_maybe_parametrized_func(name, func, result, config, kw):
 def _maintest_run_test_function(name, func, result, config, kw, check_xfail=True):
     error, testout = None, None
     nocapture = config.nocapture is True or name in config.nocapture
-    context = ipd.dev.nocontext if nocapture else ipd.dev.capture_stdio
+    context = evn.dev.nocontext if nocapture else evn.dev.capture_stdio
     with context() as testout:  # noqa
         try:
-            ipd.kwcall(config.fixtures, config.funcsetup)
+            evn.kwcall(config.fixtures, config.funcsetup)
             if not config.dryrun:
-                ipd.kwcall(config.fixtures | kw, func)
+                evn.kwcall(config.fixtures | kw, func)
                 result.passed.append(name)
         except pytest.skip.Exception:
             result.skipexcn.append(name)
         except AssertionError as e:
-            if ipd.dev.has_pytest_mark(func, 'xfail'): result.xfailed.append(name)
+            if evn.dev.has_pytest_mark(func, 'xfail'): result.xfailed.append(name)
             else: result.failed.append(name)
             error = e
         except Exception as e:  # noqa
@@ -134,20 +134,20 @@ def maincrudtest(crud, namespace, fixtures=None, funcsetup=lambda: None, **kw):
 
         def newfuncsetup(backend):
             backend._clear_all_data_for_testing_only()
-            ipd.kwcall(fixtures, funcsetup)
+            evn.kwcall(fixtures, funcsetup)
 
         return maintest(namespace, fixtures, funcsetup=newfuncsetup, **kw)
 
-def make_parametrized_tests(namespace: ipd.MutableMapping,
+def make_parametrized_tests(namespace: evn.MutableMapping,
                             prefix: str,
                             args: list[T],
-                            convert: ipd.Callable[[T], ipd.Any] = lambda x: x,
+                            convert: evn.Callable[[T], evn.Any] = lambda x: x,
                             **kw):
     for arg in args:
 
-        @ipd.dev.timed(name=f'{prefix}setup')
+        @evn.dev.timed(name=f'{prefix}setup')
         def run_convert(arg, kw=kw):
-            return ipd.kwcall(kw, convert, arg)
+            return evn.kwcall(kw, convert, arg)
 
         processed = run_convert(arg)
 
@@ -156,9 +156,9 @@ def make_parametrized_tests(namespace: ipd.MutableMapping,
                 name = k[prefix.find('test_'):]
 
                 def testfunc(arg=arg, func=func, processed=processed, kw=kw):
-                    return ipd.kwcall(kw, func, copy.copy(processed))
+                    return evn.kwcall(kw, func, copy.copy(processed))
 
-                # c = ipd.dev.timed(lambda arg, kw=kw: ipd.kwcall(kw, convert, arg), name=f'{name}_setup')
-                # testfunc = lambda func=func, arg=arg, c=c, kw=kw: ipd.kwcall(kw, func, c(arg))
+                # c = evn.dev.timed(lambda arg, kw=kw: evn.kwcall(kw, convert, arg), name=f'{name}_setup')
+                # testfunc = lambda func=func, arg=arg, c=c, kw=kw: evn.kwcall(kw, func, c(arg))
                 testfunc.__name__ = testfunc.__qualname__ = f'{name}_{arg}'
                 namespace[f'{name}_{str(arg).upper()}'] = testfunc

@@ -36,4 +36,4 @@ See Also:
 - test_* modules for validation and examples
 """
 
-from evn.cli.cli_metaclass import CLI as CLI
+from evn.cli.cli_metaclass import CLI as CLI, walk_click_group as walk_click_group

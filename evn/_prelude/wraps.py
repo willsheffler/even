@@ -5,7 +5,7 @@ def wraps(func):
 
     This decorator is used to wrap a function and preserve its metadata, such as
     the function name, docstring, and module. It is typically used when creating
-    decorators that modify the behavior of a function. Unlike ipd.wraps, this
+    decorators that modify the behavior of a function. Unlike evn.wraps, this
     version removes the original __doc__ to avoid warnings in sphinx
 
     Args:

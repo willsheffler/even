@@ -1,9 +1,9 @@
 import unittest
-from ipd import (isstr, isint, islist, isdict, isseq, ismap, isseqmut, ismapmut, isiter)
+from evn import (isstr, isint, islist, isdict, isseq, ismap, isseqmut, ismapmut, isiter)
 
-import ipd
+import evn
 
-config_test = ipd.Bunch(
+config_test = evn.Bunch(
     re_only=[
         #
     ],
@@ -13,7 +13,7 @@ config_test = ipd.Bunch(
 )
 
 def main():
-    ipd.tests.maintest(
+    evn.tests.maintest(
         namespace=globals(),
         config=config_test,
         verbose=1,

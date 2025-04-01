@@ -91,3 +91,4 @@ def ismapmut(s: Any) -> bool:
 
 def isiter(s: Any) -> bool:
     return isinstance(s, Iterable)
+

@@ -28,7 +28,7 @@ _overrides = {
 
 # set to mannually map a file to another file
 _file_mappings = {
-    'pymol_selection_algebra.lark': ['ipd/tests/sel/test_sel_pymol.py'],
+    'pymol_selection_algebra.lark': ['evn/tests/sel/test_sel_pymol.py'],
 }
 
 # postprocess command
@@ -109,7 +109,7 @@ def testfile_of(projects, path, bname, debug=False, **kw) -> str:
 # def locate_fname(fname):
 #     'locate file in sys.path'
 #     if os.path.exists(fname): return fname
-#     candidates = [fn for fn in ipd.dev.project_files() if fn.endswith(fname)]
+#     candidates = [fn for fn in evn.dev.project_files() if fn.endswith(fname)]
 #     if len(candidates) == 1: return candidates[0]
 #     if len(candidates) == 0: raise FileNotFoundError(f'file {fname} not found in git project')
 #     raise FileNotFoundError(f'file {fname} found ambiguous {candidates} in git project')

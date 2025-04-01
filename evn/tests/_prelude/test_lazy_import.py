@@ -2,40 +2,40 @@ import sys
 
 import pytest
 
-import ipd
-from ipd._prelude.lazy_import import _LazyModule, lazyimport
+import evn
+from evn._prelude.lazy_import import _LazyModule, lazyimport
 
-testconfig = ipd.Bunch(nocapture=['test_broken_package'], )
+testconfig = evn.Bunch(nocapture=['test_broken_package'], )
 
 def main():
-    ipd.tests.maintest(namespace=globals(), config=testconfig)
+    evn.tests.maintest(namespace=globals(), config=testconfig)
 
 def test_broken_package():
     if 'doctest' not in sys.modules:
-        borked = lazyimport('ipd.data.tests.broken_py_file')
-        with pytest.raises(ipd.LazyImportError) as e:
+        borked = lazyimport('evn.data.tests.broken_py_file')
+        with pytest.raises(evn.LazyImportError) as e:
             borked.foo
 
 def test_maybeimport():
-    re = ipd.maybeimport('re')
+    re = evn.maybeimport('re')
     assert re is sys.modules['re']
-    missing = ipd.maybeimport('noufuomemioixecmeiorutnaufoinairesvoraisevmraoui')
+    missing = evn.maybeimport('noufuomemioixecmeiorutnaufoinairesvoraisevmraoui')
     assert not missing
-    missing = ipd.maybeimports('noufuomem ioixecmeiorutnaufoina iresvoraisevmraoui')
+    missing = evn.maybeimports('noufuomem ioixecmeiorutnaufoina iresvoraisevmraoui')
     assert not any(missing)
 
 def test_lazyimport_re():
-    re = ipd.lazyimport('re')
+    re = evn.lazyimport('re')
     assert isinstance(re, _LazyModule)
     assert 2 == len(re.findall('foo', 'foofoo'))
     assert isinstance(re, _LazyModule)
 
 def test_lazyimport_this():
-    this = ipd.lazyimport('this')
+    this = evn.lazyimport('this')
     assert not this._lazymodule_is_loaded()
-    with ipd.dev.capture_stdio() as poem:
+    with evn.dev.capture_stdio() as poem:
         assert this.c == 97
-    assert 'The Zen of Python, by Tim Peters' == ipd.first(poem.readlines()).strip()
+    assert 'The Zen of Python, by Tim Peters' == evn.first(poem.readlines()).strip()
     assert this._lazymodule_is_loaded()
 
 def helper_test_re_ft_it(re, ft, it):
@@ -44,7 +44,7 @@ def helper_test_re_ft_it(re, ft, it):
     assert list(it.chain([0], [1], [2])) == [0, 1, 2]
 
 def test_multi_lazyimport_args():
-    helper_test_re_ft_it(*ipd.lazyimports('re', 'functools', 'itertools'))
+    helper_test_re_ft_it(*evn.lazyimports('re', 'functools', 'itertools'))
 
 if __name__ == '__main__':
     main()

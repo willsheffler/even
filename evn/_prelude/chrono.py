@@ -57,7 +57,7 @@ Using as a **function decorator**:
 >>>     time.sleep(0.2)
 >>>
 >>> slow_function()
->>> print(ipd.global_chrono.report(printme=False))
+>>> print(evn.global_chrono.report(printme=False))
 
 Using as a **class decorator**:
 
@@ -68,7 +68,7 @@ Using as a **class decorator**:
 >>>
 >>> obj = MyClass()
 >>> obj.method()
->>> print(ipd.global_chrono.report(printme=False))
+>>> print(evn.global_chrono.report(printme=False))
 
 Checkpointing with Automatic Chrono Selection:
 ---------------------------------------------
@@ -123,10 +123,10 @@ import inspect
 import numpy as np
 from dataclasses import dataclass, field
 from typing import List, Union
-import ipd
+import evn
 
 try:
-    from ipd.cython.dynamic_float_array import DynamicFloatArray
+    from evn.cython.dynamic_float_array import DynamicFloatArray
     CYTHON_AVAILABLE = True
 except ImportError:
     CYTHON_AVAILABLE = False
@@ -184,7 +184,7 @@ class Chrono:
         if self._start is not None:
             total_elapsed = time.perf_counter() - self._start
             self._store_checkpoint("total", total_elapsed)
-            ipd.ic(id(self), id(ipd.global_chrono))
+            evn.ic(id(self), id(evn.global_chrono))
             self._start = None
 
     def __enter__(self):
@@ -318,9 +318,9 @@ def chrono(func=None, *, label=None, timer=None):
     if func is None: return functools.partial(chrono, label=label, timer=timer)
     if inspect.isclass(func): return chrono_class(cls=func, label=label, timer=timer)
 
-    @ipd.wraps(func)
+    @evn.wraps(func)
     def wrapper(*args, **kwargs):
-        t = timer or kwargs.get("timer", ipd.global_chrono)
+        t = timer or kwargs.get("timer", evn.global_chrono)
         function_name = func.__qualname__
         checkpoint_label = label or function_name
         t.checkpoint(interject=True)
@@ -353,7 +353,7 @@ def chrono_class(cls, label=None, timer=None):
 
 def checkpoint(label=None, *, interject=False, **kw):
     """
-    Create a module-level checkpoint, using a timer from `kw` or falling back to `ipd.global_chrono`.
+    Create a module-level checkpoint, using a timer from `kw` or falling back to `evn.global_chrono`.
 
     Args:
         label (str, optional): Name of the checkpoint. If None, an auto-generated name is used.
@@ -368,10 +368,10 @@ def checkpoint(label=None, *, interject=False, **kw):
             time.sleep(0.1)  # Some operation
             checkpoint("iteration_done")
         checkpoint("end_loop")
-        ipd.global_chrono.report()
+        evn.global_chrono.report()
         ```
     """
-    t = kw.get("timer", ipd.global_chrono)
+    t = kw.get("timer", evn.global_chrono)
 
     if label is None:
         label = "__interject__" if interject else "unnamed"
