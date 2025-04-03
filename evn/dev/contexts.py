@@ -87,7 +87,7 @@ def set_class(cls, self):
         self.__class__ = orig  # type: ignore
 
 @contextlib.contextmanager
-def stdio():
+def force_stdio():
     """useful as temporary escape hatch with io capuring contexts"""
     with redirect(sys.__stdout__, sys.__stderr__) as (out, err):
         try:
@@ -102,21 +102,26 @@ def nocontext():
     finally:
         pass
 
-class TracePrints(object):
+class TraceWrites(object):
 
     def __init__(self):
         self.stdout = sys.stdout
 
     def write(self, s):
         self.stdout.write("Writing %r\n" % s)
-        traceback.print_stack(file=self.stdout)
+        # assert 0, 'found your first write...'
+        stack = traceback.format_stack()
+        import evn
+        stack = evn.tool.filter_python_output(os.linesep.join(stack))
+        sys.__stderr__.write('A WRITE TO STDOUT!:\n')
+        sys.__stderr__.write(stack)
 
     def flush(self):
         self.stdout.flush()
 
 @contextlib.contextmanager
-def trace_prints():
-    tp = TracePrints()
+def trace_writes_to_stdout():
+    tp = TraceWrites()
     with redirect(stdout=tp):
         yield tp
 

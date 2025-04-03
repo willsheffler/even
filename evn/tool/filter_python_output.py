@@ -8,9 +8,9 @@ re_end = re.compile(r'(^[A-Za-z0-9.]+Error)(: .*)?')
 re_null = r'a^'  # never matches
 re_presets = dict(boilerplate=dict(
     file=
-    r'evn/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py',
+    re.compile(r'ipd/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py'),
     func=
-    r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall',
+    re.compile(r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall'),
 ))
 
 def filter_python_output(
@@ -18,7 +18,7 @@ def filter_python_output(
     entrypoint=None,
     re_file=re_null,
     re_func=re_null,
-    preset=None,
+    preset='boilerplate',
     minlines=30,
     filter_numpy_version_nonsense=True,
     keep_blank_lines=False,
@@ -73,7 +73,7 @@ def _strip_line_extra_whitespace(line):
     return line.rstrip()
 
 # def _strip_text_extra_whitespace(text):
-    # return re.sub(r'\n\n', os.linesep, text, re.MULTILINE)
+# return re.sub(r'\n\n', os.linesep, text, re.MULTILINE)
 
 def _filter_numpy_version_nonsense(text):
     text = text.replace(

@@ -24,7 +24,7 @@ def tmp_package() -> Generator[Tuple[str, str], None, None]:
 def test_cherry_pick_import_variable(tmp_package: Tuple[str, str]) -> None:
     """Test cherry_pick_import with a variable."""
     path, pkg_name = tmp_package
-    evn.ic('INTEST')
+    # ic('INTEST')
     var1 = cherry_pick_import(f"{pkg_name}.module1", "variable1", path=path)
     assert var1 == "module1_var"
     assert f"{pkg_name}.module1" in sys.modules
@@ -186,7 +186,7 @@ def make_temp_package_structure() -> Generator[Tuple[str, str], None, None]:
         sys.path.insert(0, temp_dir)
         os.chdir(temp_dir)
         assert os.path.exists(f'{temp_dir}/{pkg_name}/__init__.py')
-        evn.icv(f'{temp_dir}/{pkg_name}/__init__.py')
+        # ic(f'{temp_dir}/{pkg_name}/__init__.py')
         assert os.path.exists(f'{temp_dir}/{pkg_name}/module1.py')
         assert os.path.exists(f'{temp_dir}/{pkg_name}/subpkg/__init__.py')
         assert os.path.exists(f'{temp_dir}/{pkg_name}/subpkg/module2.py')

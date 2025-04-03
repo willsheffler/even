@@ -1,3 +1,4 @@
+import typing as t
 import contextlib
 import hashlib
 import os
@@ -5,19 +6,20 @@ import shutil
 from rapidfuzz import fuzz
 from pathlib import Path
 from typing import Generic, TypeVar, Mapping, Iterable
-from evn.decontain.item_wise import item_wise_operations
-from evn.decontain.iterize import subscriptable_for_attributes
+from evn.decon.item_wise import item_wise_operations
+from evn.decon.attr_access import subscriptable_for_attributes
 from evn.print import summary
+from evn import NA
 
 __all__ = ('Bunch', 'bunchify', 'unbunchify', 'make_autosave_hierarchy', 'unmake_autosave_hierarchy')
 
-T = TypeVar('T')
+T = TypeVar('T', bound=t.Any)
 
 def strmatch(a, b, fuzzy=.2, partial='auto'):
     if not fuzzy: return a in b
     func = fuzz.ratio
     if partial is True or (partial == 'auto' and max(len(a), len(b)) > 10): func = fuzz.partial_ratio
-    return func(a, b) >= 1 - frac
+    return func(a, b) >= 1 - fuzzy
 
 def bunchfind(haystack, needle, fuzzy=0, partial='auto', path='', seenit=None, matcher=fuzz.partial_ratio):
     seenit = seenit or set()
@@ -51,7 +53,8 @@ class Bunch(dict, Generic[T]):
         _autosave=None,
         _autoreload=None,
         _parent=None,
-        _split_space=False,
+        _split='',
+        _like=None,
         **kw,
     ):
         if __arg_or_ns is not None:
@@ -62,84 +65,102 @@ class Bunch(dict, Generic[T]):
         self.update(kw)
 
         if _default == "__NODEFALT": _default = None
-        self.__dict__['_special'] = {}
-        self.__dict__["_special"]['strict_lookup'] = _strict is True or _strict == "__STRICT"
-        self.__dict__["_special"]['default'] = _default
-        self.__dict__["_special"]["storedefault"] = _storedefault
-        self.__dict__["_special"]["autosave"] = str(_autosave) if _autosave else None
-        self.__dict__["_special"]["autoreload"] = _autoreload
-        self.__dict__["_special"]["split_space"] = _split_space
-        if _autoreload:
-            Path(_autoreload).touch()
-            self.__dict__['_special']['autoreloadhash'] = hashlib.md5(open(_autoreload,
-                                                                           'rb').read()).hexdigest()
-        self.__dict__["_special"]["parent"] = _parent
+        self.__dict__['_config'] = {}
+        conf = self.__dict__['_config']
+        conf['strict_lookup'] = _strict is True or _strict == "__STRICT"
+        conf['default'] = _default
+        conf["storedefault"] = _storedefault
+        conf["autosave"] = str(_autosave) if _autosave else None
+        conf["autoreload"] = _autoreload
+        conf["split"] = _split
+        if conf['autoreload']:
+            Path(conf['autoreload']).touch()
+            with open(conf['autoreload'], 'rb') as inp:
+                self._conf('autoreloadhash', hashlib.md5(inp.read()).hexdigest())
+        conf["parent"] = _parent
         for k in list(self.keys()):
             if hasattr(super(), k):
                 self[f'{k}_'] = super().__getitem__(k)
                 del self[k]
                 # print(f'WARNING {k} is a reserved name for dict, renaming to {k}_')
+        if _like: conf |= _like.__dict__['_config']
 
     _find = bunchfind
 
+    def _conf(self, k, v: t.Any = NA) -> t.Any:
+        if '_config' not in self.__dict__: return ''
+        if v == NA: return self.__dict__['_config'][k]
+        else: self.__dict__['_config'][k] = v
+
     def _autoreload_check(self):
-        if not self.__dict__['_special']['autoreload']: return
+        if not self._conf('autoreload'): return
         import yaml
-        with open(self.__dict__['_special']['autoreload'], 'rb') as inp:
+        with open(self._conf('autoreload'), 'rb') as inp:
             newhash = hashlib.md5(inp.read()).hexdigest()
-        # print('_autoreload_check', newhash, self.__dict__['_special']['autoreloadhash'])
-        if self.__dict__['_special']['autoreloadhash'] == newhash: return
-        self.__dict__['_special']['autoreloadhash'] = newhash
+        # print('_autoreload_check', newhash, self._conf('autoreloadhash'))
+        if self._conf('autoreloadhash') == newhash: return
+        self._conf('autoreloadhash', newhash)
         # disable autosave
-        orig, self.__dict__['_special']['autosave'] = self.__dict__['_special']['autosave'], None
-        # print('RELOAD FROM FILE', self.__dict__['_special']['autoreload'])
-        with open(self.__dict__['_special']['autoreload']) as inp:
+        orig = self._conf('autosave')
+        self._conf('autosave', None)
+        # print('RELOAD FROM FILE', self._conf('autoreload'))
+        with open(self._conf('autoreload')) as inp:
             new = yaml.load(inp, yaml.Loader)
-        special = self._special
+        special = self._conf
         super().clear()
         for k, v in new.items():
             self[k] = make_autosave_hierarchy(v,
                                               _parent=(self, None),
-                                              _default=self._special['default'],
-                                              _strict=self._special['strict_lookup'])
-        self.__dict__['_special']['autosave'] = orig
-        assert self._special == special
+                                              _default=self._conf('default'),
+                                              _strict=self._conf('strict_lookup'))
+        self._conf('autosave', orig)
+        assert self._conf == special
 
     def _notify_changed(self, k=None, v=None):  # sourcery skip: extract-method
-        if self._special['parent']:
-            parent, selfkey = self._special['parent']
+        if self._conf('parent'):
+            parent, selfkey = self._conf('parent')
             return parent._notify_changed(f'{selfkey}.{k}', v)
-        if self._special['autosave']:
+        if self._conf('autosave'):
             import yaml
             if k:
                 k = k.split('.')[0]
                 if isinstance(v, (list, set, tuple, Bunch)):
                     self[k] = make_autosave_hierarchy(self[k],
                                                       _parent=(self, None),
-                                                      _default=self._special['default'],
-                                                      _strict=self._special['strict_lookup'])
-            os.makedirs(os.path.dirname(self._special['autosave']), exist_ok=True)
-            with open(self._special['autosave'] + '.tmp', 'w') as out:
+                                                      _default=self._conf('default'),
+                                                      _strict=self._conf('strict_lookup'))
+            os.makedirs(os.path.dirname(self._conf('autosave')), exist_ok=True)
+            with open(self._conf('autosave') + '.tmp', 'w') as out:
                 yaml.dump(unmake_autosave_hierarchy(self), out)
-            shutil.move(self._special['autosave'] + '.tmp', self._special['autosave'])
-            with open(self._special['autoreload'], 'rb') as inp:
-                self._special['autoreloadhash'] = hashlib.md5(inp.read()).hexdigest()
-                # print('SAVE TO ', self.__dict__['_special']['autosave'])
+            shutil.move(self._conf('autosave') + '.tmp', self._conf('autosave'))
+            with open(self._conf('autoreload'), 'rb') as inp:
+                self._conf('autoreloadhash', hashlib.md5(inp.read()).hexdigest())
+                # print('SAVE TO ', self._conf('autosave'))
+
+    def _merge(self, other, layer: str = ''):
+        for key in other:
+            if key in self:
+                if isinstance(self[key], dict) and isinstance(other[key], dict):
+                    if not isinstance(self[key], Bunch):
+                        self[key] = Bunch(self[key], _like=self)
+                    self[key]._merge(other[key])
+                else:
+                    self[key] = other[key]
+            else:
+                self[key] = other[key]
+        return self
 
     def default(self, key):
-        dflt = self.__dict__['_special']['default']
+        dflt = self._conf('default')
         if dflt == 'bunchwithparent':
-            new = Bunch(_parent=(self, None),
-                        _default='bunchwithparent',
-                        _strict=self.__dict__['_special']['strict_lookup'])
-            special = new._special.copy()
+            new = Bunch(_parent=(self, None), _default='bunchwithparent', _strict=self._conf('strict_lookup'))
+            special = new._config.copy()
             special['parent'] = id(special['parent'])
-            # print('new child bunch:', key)  #, '_special:', special)
+            # print('new child bunch:', key)  #, '_config:', special)
             return new
-        if hasattr(dflt, "__call__"):
-            return dflt()
-        else:
-            return dflt
+        if dflt == Bunch: return Bunch(_like=self)
+        if hasattr(dflt, "__call__"): return dflt()
+        else: return dflt
 
     def __eq__(self, other):
         self._autoreload_check()
@@ -182,7 +203,7 @@ class Bunch(dict, Generic[T]):
 
     def __contains__(self, k):
         self._autoreload_check()
-        if k == "_special":
+        if k == "_config":
             return False
         try:
             return dict.__contains__(self, k) or k in self.__dict__
@@ -190,27 +211,21 @@ class Bunch(dict, Generic[T]):
             return False
 
     def is_strict(self):
-        return self.__dict__['_special']["strict_lookup"]
-
-    def __getitem__(self, key: str) -> T:
-        if ' ' in key: key = key.split()
-        if not isinstance(key, str):
-            return [getattr(self, k) for k in key]
-        return self.__getattr__(key)
+        return self.__dict__['_config']["strict_lookup"]
 
     # try:
     # super().__getitem__(key)
     # except KeyError:
-    # return self.__dict__['_special']('default')()
+    # return self.__dict__['_config']('default')()
 
     def __getattr__(self, k: str) -> T:
         self._autoreload_check()
-        if k == "_special":
-            raise ValueError("_special is a reseved name for Bunch")
+        if k == "_config":
+            raise ValueError("_config is a reseved name for Bunch")
         if k == "__deepcopy__":
             return None
-        if self.__dict__['_special']["strict_lookup"] and k not in self:
-            if self.__dict__['_special']['default']:
+        if self.__dict__['_config']["strict_lookup"] and k not in self:
+            if self._conf('default'):
                 self[k] = new = self.default(k)
                 return new
             raise AttributeError(f"Bunch is missing value for key {k}")
@@ -221,23 +236,36 @@ class Bunch(dict, Generic[T]):
             try:
                 return super().__getitem__(k)
             except KeyError as e:
-                if self.__dict__['_special']["strict_lookup"]:
+                if self.__dict__['_config']["strict_lookup"]:
                     raise e
-                if self._special['storedefault']:
+                if self._conf('storedefault'):
                     self[k] = self.default(k)
                     return self[k]
                 return self[k]
 
+    def __getitem__(self, key: str) -> T:
+        if not isinstance(key, str):
+            return [getattr(self, k) for k in key]
+        return self.__getattr__(key)
+
+    def _get_split(self, keys, create=False):
+        for split in self._conf('split'):
+            if split in keys and split:
+                obj = self
+                for k in keys.split():
+                    if create: obj = obj.setdefault(k, Bunch(_like=self))
+                    else: obj = obj[k]
+                return obj
+        return self.__getattr__(keys)
+
     def __setitem__(self, k: str, v: T):
-        if ' ' in k and self.__dict__['_special']['split_space']:
-            obj, keys, klast = self, *k.rsplit(maxsplit=1)
-            for k in keys.split():
-                obj[k] = obj = obj[k] if k in obj else Bunch()
-            obj[klast] = v
-            return
-        # if k == 'polls':
-        # print('set polls trace:')
-        # traceback.print_stack()
+        for split in self._conf('split'):
+            if split in k and split:
+                obj, keys, klast = self, *k.rsplit(split, 1)
+                for k in keys.split():
+                    obj[k] = obj = obj[k] if k in obj else Bunch(_like=self)
+                obj[klast] = v
+                return
         super().__setitem__(k, v)
 
     def __setattr__(self, k: str, v: T):
@@ -283,7 +311,7 @@ class Bunch(dict, Generic[T]):
 
     def copy(self):
         self._autoreload_check()
-        return Bunch.from_dict(super().copy())
+        return Bunch.from_dict(super().copy(), _like=self)
 
     def set_if_missing(self, k: str, v):
         self._autoreload_check()
@@ -299,7 +327,7 @@ class Bunch(dict, Generic[T]):
             else:
                 kw = vars(__BUNCH_SUB_ITEMS)
         newbunch = self.copy()
-        newbunch._special = self.__dict__['_special']
+        newbunch._config = self.__dict__['_config']
         for k, v in kw.items():
             if v is None and k in newbunch:
                 del newbunch[k]
@@ -311,7 +339,7 @@ class Bunch(dict, Generic[T]):
     def only(self, keys):
         self._autoreload_check()
         newbunch = Bunch()
-        newbunch._special = self.__dict__['_special']
+        newbunch._config = self.__dict__['_config']
         for k in keys:
             if k in self:
                 newbunch[k] = self[k]
@@ -320,7 +348,7 @@ class Bunch(dict, Generic[T]):
     def without(self, *dropkeys):
         self._autoreload_check()
         newbunch = Bunch()
-        newbunch._special = self.__dict__['_special']
+        newbunch._config = self.__dict__['_config']
         for k in self.keys():
             if k not in dropkeys:
                 newbunch[k] = self[k]
@@ -330,17 +358,12 @@ class Bunch(dict, Generic[T]):
         self._autoreload_check()
         toremove = []
         for k, v in self.__dict__.items():
-            if k == "_special":
-                continue
-            if func(k, v, depth):
-                toremove.append(k)
-            elif isinstance(v, Bunch) and recurse:
-                v.visit_remove_if(func, recurse, depth=depth + 1)
+            if k == "_config": continue
+            if func(k, v, depth): toremove.append(k)
+            elif isinstance(v, Bunch) and recurse: v.visit_remove_if(func, recurse, depth=depth + 1)
         for k, v in self.items():
-            if func(k, v, depth):
-                toremove.append(k)
-            elif isinstance(v, Bunch) and recurse:
-                v.visit_remove_if(func, recurse, depth=depth + 1)
+            if func(k, v, depth): toremove.append(k)
+            elif isinstance(v, Bunch) and recurse: v.visit_remove_if(func, recurse, depth=depth + 1)
         for k in toremove:
             self.__delattr__(k)
 
@@ -370,7 +393,7 @@ class Bunch(dict, Generic[T]):
                 return "Bunch()"
             w = int(min(40, max(len(str(k)) for k in self)))
             for k, v in self.items():
-                s += f'  {k:{f"{w}"}} = {summary(v)}{os.linesep}\n'
+                s += f'  {k:{f"{w}"}} = {summary(v)}{os.linesep}u'
             s += ")"
         return s
 
@@ -413,8 +436,8 @@ class Bunch(dict, Generic[T]):
         return unbunchify(self)
 
     @staticmethod
-    def from_dict(d):
-        return bunchify(d)
+    def from_dict(d, _like=None):
+        return bunchify(d, _like=_like)
 
 class BunchChild:
 
@@ -449,13 +472,21 @@ class BunchChildSet(BunchChild, set):
         super().remove(elem)
         self._parent[0]._notify_changed(self._parent[1], elem)
 
-def bunchify(x):
-    if isinstance(x, dict):
-        return Bunch(**{k: bunchify(v) for k, v in x.items()})
-    elif isinstance(x, (list, tuple)):
-        return type(x)(bunchify(v) for v in x)
+@t.overload
+def bunchify(data: dict[str, t.Any], _like: t.Optional[Bunch] = None) -> Bunch:
+    ...
+
+@t.overload
+def bunchify(data: T, _like: t.Optional[Bunch]) -> T:
+    ...
+
+def bunchify(data: t.Any, _like=None):
+    if isinstance(data, dict):
+        return Bunch(_like=_like, **{k: bunchify(v, _like=_like) for k, v in data.items()})  # type: ignore
+    elif isinstance(data, (list, tuple)):
+        return type(data)(bunchify(v, _like=_like) for v in data)
     else:
-        return x
+        return data
 
 def make_autosave_hierarchy(x, _parent=None, seenit=None, _strict=True, _autosave=None, _default=None):
     seenit = seenit or set()

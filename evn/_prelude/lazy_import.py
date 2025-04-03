@@ -31,9 +31,9 @@ def lazyimports(
 
 def timed_import_module(name):
     import evn
-    evn.dev.global_timer.checkpoint(interject=True)
+    evn.global_timer.checkpoint(interject=True)
     mod = import_module(name)
-    evn.dev.global_timer.checkpoint(f'LAZY import {name}')
+    evn.global_timer.checkpoint(f'LAZY import {name}')
     return mod
 
 def lazyimport(name: str,
@@ -161,7 +161,7 @@ _all_skipped_lazy_imports = set()
 _skip_global_install = False
 _warned = set()
 
-# from evn.dev.contexts import onexit
+# from evn.contexts import onexit
 # @onexit
 # def print_skipped():
 #     if _all_skipped_lazy_imports:
@@ -169,10 +169,10 @@ _warned = set()
 
 # _DEBUG_ALLOW_LAZY_IMPORT = [
 #     'evn.crud',
-#     'evn.dev.cuda',
+#     'evn.cuda',
 #     'evn.observer',
-#     'evn.dev.qt',
-#     'evn.dev.sieve',
+#     'evn.qt',
+#     'evn.sieve',
 #     'evn.fit',
 #     'evn.motif',
 #     'evn.pdb',
@@ -193,7 +193,7 @@ _warned = set()
 #     'torch',
 #     'evn.sym.high_t',
 #     'omegaconf',
-#     'evn.dev.cli',
+#     'evn.cli',
 #     'hydra',
 #     'evn.sym.sym_tensor',
 #     'evn.homog',
@@ -202,6 +202,6 @@ _warned = set()
 #     'evn.homog.thgeom',
 #     'evn.homog.quat',
 #     'evn.sym.helix',
-#     'evn.dev.testing',
+#     'evn.testing',
 #     'evn.tests.sym',
 # ]

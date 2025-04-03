@@ -1,49 +1,59 @@
 import tempfile
-from pathlib import Path
+import evn
 from evn.config import get_config, load_env_layer, load_toml_layer
-from evn.cli.cliconf import generate_config_from_cli, DEFAULT_SENTINEL
-from evn.tests.cli.evn_test_app import TestCli
-
+from evn.testing import TestApp
 
 def test_env_layer_parsing(monkeypatch):
-    monkeypatch.setenv("EVN_FORMAT__TAB_WIDTH", "4")
-    monkeypatch.setenv("EVN_DEV__TEST__FAIL_FAST", "true")
+    monkeypatch.setenv("EVN_TESTAPP__FORMAT__TAB_WIDTH", "4")
+    monkeypatch.setenv("EVN_TESTAPP__DEV__TEST__FAIL_FAST", "true")
     env = load_env_layer("EVN_")
-    assert env['format']['tab_width'] == "4"
-    assert env['dev']['test']['fail_fast'] == "true"
-
+    assert env.testapp.format.tab_width == "4"
+    assert env.testapp.dev.test.fail_fast == "true"
 
 def test_toml_layer_loading():
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".toml", delete=False) as f:
         f.write("""
-        [format]
+        [testapp.format]
         tab_width = 2
 
-        [dev.test]
+        [testapp.dev.test]
         fail_fast = true
         """)
         f.flush()
-        fpath = Path(f.name)
+        fpath = evn.Path(f.name)
 
     loaded = load_toml_layer(fpath)
-    assert loaded['format']['tab_width'] == 2
-    assert loaded['dev']['test']['fail_fast'] is True
+    assert loaded.testapp.format.tab_width == 2
+    assert loaded.testapp.dev.test.fail_fast is True
 
     fpath.unlink()  # cleanup
 
-
-def test_generate_config_from_cli():
-    config = generate_config_from_cli(TestCli)
+def test_get_config_from_app_defaults():
+    config = evn.cli.get_config_from_app_defaults(TestApp)
+    # print()
+    # print_config(config.testapp.dev.format)
+    # print(config.testapp.dev.format.format.keys())
     assert isinstance(config, dict)
-    assert config['dev']['format']['stream']['tab_width'] == 4
-    assert config['dev']['test']['file']['fail_fast'] == False
-    assert config['doc']['build']['open_browser'] == False
-    assert config['qa']['review']['coverage']['min_coverage'] == 75
-    assert config['qa']['review']['changes']['summary'] == True
-    assert config['run']['dispatch']['file']['path'] == DEFAULT_SENTINEL
+    assert config.testapp.dev.format.stream.tab_width == 4
+    assert config.testapp.dev.test.file.fail_fast == False
+    assert config.testapp.dev.doc.build.open_browser == False
+    assert config.testapp.qa.review.coverage.min_coverage == 75
+    assert config.testapp.qa.review.changes.summary == True
+    assert config.testapp.run.dispatch.file.path == None
 
+def test_config_includes_all_layers(monkeypatch):
+    monkeypatch.setenv("EVN_TESTAPP__PROJ__TAGS__REBUILD", "true")
+    config = get_config(TestApp)
+    # print_config(config)
+    assert config.testapp.proj.tags.rebuild == "true"
 
-def test_chainmap_includes_all_layers(monkeypatch):
-    monkeypatch.setenv("EVN_PROJ__TAGS__REBUILD", "true")
-    config = get_config()
-    assert config['proj']['tags']['rebuild'] == "true"
+def test_config_includes_callbacks():
+    config = get_config(TestApp)
+    # print_config(config)
+    assert config.testapp._callback.foo == "bar"
+    assert config.testapp.doccheck._callback.docsdir == "docs"
+
+def test_config_is_corrent_bunch_type():
+    config = get_config(TestApp)
+    assert config.__dict__['_config']['split'], 'Config should have split attribute'
+

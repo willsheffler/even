@@ -10,7 +10,7 @@ def main():
 
 def test_iterize():
 
-    @evn.dev.iterize_on_first_param
+    @evn.iterize_on_first_param
     def Foo(a):
         return a * a
 
@@ -19,19 +19,19 @@ def test_iterize():
 
 def test_iterize_basetype():
 
-    @evn.dev.iterize_on_first_param(basetype=str)
+    @evn.iterize_on_first_param(basetype=str)
     def bar(a):
         return 2 * a
 
     assert bar('foo') == 'foofoo'
     assert bar(['a', 'b']) == ['aa', 'bb']
-    evn.icv(bar('a b'))
+    # ic(bar('a b'))
     assert bar('a b') == ['aa', 'bb']
     assert bar(1.1) == 2.2
 
 def test_iterize_asdict():
 
-    @evn.dev.iterize_on_first_param(basetype=str, asdict=True)
+    @evn.iterize_on_first_param(basetype=str, asdict=True)
     def baz(a):
         return 2 * a
 
@@ -42,7 +42,7 @@ def test_iterize_asdict():
 
 def test_iterize_asbunch():
 
-    @evn.dev.iterize_on_first_param(basetype=str, asbunch=True)
+    @evn.iterize_on_first_param(basetype=str, asbunch=True)
     def baz(a):
         return 2 * a
 
@@ -55,14 +55,14 @@ def test_iterize_asbunch():
 
 def test_iterize_allowmap():
 
-    @evn.dev.iterize_on_first_param(basetype=str, asbunch=True)
+    @evn.iterize_on_first_param(basetype=str, asbunch=True)
     def foo(a):
         return 2 * a
 
     with pytest.raises(TypeError):
         foo(dict(a=1, b=2))
 
-    @evn.dev.iterize_on_first_param(basetype=str, asbunch=True, allowmap=True)
+    @evn.iterize_on_first_param(basetype=str, asbunch=True, allowmap=True)
     def bar(a):
         return 2 * a
 
@@ -73,14 +73,14 @@ def test_iterize_basetype_string():
     class mylist(list):
         pass
 
-    @evn.dev.iterize_on_first_param(basetype='str')
+    @evn.iterize_on_first_param(basetype='str')
     def foo(a):
         return 2 * a
 
     with pytest.raises(TypeError):
         foo(dict(a=1, b=2))
 
-    @evn.dev.iterize_on_first_param(basetype='mylist')
+    @evn.iterize_on_first_param(basetype='mylist')
     def bar(a):
         return len(a)
 
@@ -96,39 +96,39 @@ class CustomIterable(namedtuple('CustomIterable', ['items'])):
         return iter(self.items)
 
 class TestIterizeOnFirstParam(unittest.TestCase):
-    """Test suite for the evn.dev.iterize_on_first_param decorator."""
+    """Test suite for the evn.iterize_on_first_param decorator."""
 
     def setUp(self):
         """Set up test functions with the decorator applied in different ways."""
         # Basic decorator without arguments
-        @evn.dev.iterize_on_first_param
+        @evn.iterize_on_first_param
         def square(x):
             return x * x
 
         self.square = square
 
-        @evn.dev.iterize_on_first_param
+        @evn.iterize_on_first_param
         def multiply(x, y):
             return x * y
 
         self.multiply = multiply
 
         # Decorator with basetype=str
-        @evn.dev.iterize_on_first_param(basetype=str)
+        @evn.iterize_on_first_param(basetype=str)
         def get_length(x):
             return len(x)
 
         self.get_length = get_length
 
         # Decorator with basetype=str
-        @evn.dev.iterize_on_first_param(basetype=str, nonempty=True)
+        @evn.iterize_on_first_param(basetype=str, nonempty=True)
         def remove_first(x):
             return x[1:] if x else ''
 
         self.remove_first = remove_first
 
         # Using the pre-configured path decorator
-        @evn.dev.iterize_on_first_param_path
+        @evn.iterize_on_first_param_path
         def process_path(path):
             return f"Processing {path}"
 
@@ -205,7 +205,7 @@ class TestIterizeOnFirstParam(unittest.TestCase):
     def test_nested_iterables(self):
         """Test handling of nested iterables."""
         # Define a custom function that handles lists for this test
-        @evn.dev.iterize_on_first_param
+        @evn.iterize_on_first_param
         def sum_list(x):
             return sum(x) if isinstance(x, list) else x
 
@@ -213,7 +213,7 @@ class TestIterizeOnFirstParam(unittest.TestCase):
 
     def test_decorator_preserves_metadata(self):
         """Test that the decorator preserves function metadata."""
-        decorated = evn.dev.iterize_on_first_param(self.original_func)
+        decorated = evn.iterize_on_first_param(self.original_func)
 
         assert decorated.__name__ == "original_func"
         assert decorated.__doc__ == "Test docstring."
@@ -237,7 +237,7 @@ class TestIterizeOnFirstParam(unittest.TestCase):
         assert self.remove_first(self.string_list + ['a', '']) == ["ello", "orld"]
 
 class TestIterizeableFunction(unittest.TestCase):
-    """Test suite for the evn.dev.is_iterizeable helper function."""
+    """Test suite for the evn.is_iterizeable helper function."""
 
     def setUp(self):
         """Set up test data."""
@@ -247,25 +247,25 @@ class TestIterizeableFunction(unittest.TestCase):
         self.path_obj = Path("test.txt")
 
     def test_basic_iterizeable(self):
-        """Test basic evn.dev.is_iterizeable function without basetype."""
-        assert evn.dev.is_iterizeable(self.list_data) is True
-        assert evn.dev.is_iterizeable(self.string) is False
-        assert evn.dev.is_iterizeable(self.string, basetype=None) is True  # String is iterable
-        assert evn.dev.is_iterizeable(self.integer) is False
+        """Test basic evn.is_iterizeable function without basetype."""
+        assert evn.is_iterizeable(self.list_data) is True
+        assert evn.is_iterizeable(self.string) is False
+        assert evn.is_iterizeable(self.string, basetype=None) is True  # String is iterable
+        assert evn.is_iterizeable(self.integer) is False
 
     def test_iterizeable_with_basetype(self):
-        """Test evn.dev.is_iterizeable function with basetype parameter."""
+        """Test evn.is_iterizeable function with basetype parameter."""
         # String should not be considered iterable when basetype includes str
-        assert evn.dev.is_iterizeable(self.string, basetype=str) is False
-        assert evn.dev.is_iterizeable(self.list_data, basetype=str) is True
+        assert evn.is_iterizeable(self.string, basetype=str) is False
+        assert evn.is_iterizeable(self.list_data, basetype=str) is True
 
         # Path should not be considered iterable when basetype includes Path
-        assert evn.dev.is_iterizeable(self.path_obj, basetype=Path) is False
+        assert evn.is_iterizeable(self.path_obj, basetype=Path) is False
 
         # Multiple basetypes
-        assert evn.dev.is_iterizeable(self.string, basetype=(str, Path)) is False
-        assert evn.dev.is_iterizeable(self.path_obj, basetype=(str, Path)) is False
-        assert evn.dev.is_iterizeable(self.list_data, basetype=(str, Path)) is True
+        assert evn.is_iterizeable(self.string, basetype=(str, Path)) is False
+        assert evn.is_iterizeable(self.path_obj, basetype=(str, Path)) is False
+        assert evn.is_iterizeable(self.list_data, basetype=(str, Path)) is True
 
 def test_subscriptable_for_attributes__getitem__():
 
@@ -309,8 +309,8 @@ def test_subscriptable_for_attributes_groupby():
             self.a, self.b, self.c, self.group = range(6), range(1, 7), range(10, 17), 'aaabbb'
 
     foo = Foo()
-    for g, a, b, c in foo.groupby('group', 'a b c'):
-        evn.icv(g, a, b, c)
+    # for g, a, b, c in foo.groupby('group', 'a b c'):
+        # ic(g, a, b, c)
     v = list(foo.groupby('group', 'a c'))
     assert v == [('a', (0, 1, 2), (10, 11, 12)), ('b', (3, 4, 5), (13, 14, 15))]
     v = list(foo.groupby('group'))
@@ -358,7 +358,7 @@ def test_getitem_picklable():
 def test_safe_lru_cache():
     ncompute = 0
 
-    @evn.dev.safe_lru_cache(maxsize=32)
+    @evn.safe_lru_cache(maxsize=32)
     def example(x):
         nonlocal ncompute
         ncompute += 1
@@ -373,7 +373,7 @@ def test_safe_lru_cache():
 def test_safe_lru_cache_noarg():
     ncompute = 0
 
-    @evn.dev.safe_lru_cache
+    @evn.safe_lru_cache
     def example(x):
         nonlocal ncompute
         ncompute += 1

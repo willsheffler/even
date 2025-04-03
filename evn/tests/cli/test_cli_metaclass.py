@@ -63,6 +63,7 @@ def test_child_command_registration():
 def test_child_callback():
     runner = CliRunner()
     result = runner.invoke(CLIParent.__group__, ['child', '--debug', 'farewell', 'Bob'])
+    # ic(result.output)
     assert result.exit_code == 0
     assert 'Goodbye, Bob!' in result.output
     assert 'child debug is on' in result.output

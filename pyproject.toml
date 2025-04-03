@@ -7,10 +7,14 @@ name = 'evn'
 version = '0.1.0'
 requires-python = '>=3.9'
 dependencies = [
-    'ruff',
-    'rapidfuzz',
     'assertpy',
     'icecream',
+    'multipledispatch',
+    'PrettyPrintTree',
+    'pyyaml',
+    'rapidfuzz',
+    'ruff',
+    'wrapt',
 ]
 
 [project.optional-dependencies]

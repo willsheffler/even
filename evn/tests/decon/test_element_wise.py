@@ -22,15 +22,15 @@ def main():
 
 def test_generic_get_items():
     foo = dict(a=1, b_=3)
-    assert evn.dev.generic_get_items(foo) == [('a', 1)]
+    assert evn.decon.generic_get_items(foo) == [('a', 1)]
 
     class Foo:
         pass
 
     foo = Foo()
     foo.a, foo.b, foo._c = 1, 1, 1
-    assert evn.dev.generic_get_items(foo) == [('a', 1), ('b', 1)]
-    assert evn.dev.generic_get_items([0, 1, 2]) == [(0, 0), (1, 1), (2, 2)]
+    assert evn.decon.generic_get_items(foo) == [('a', 1), ('b', 1)]
+    assert evn.decon.generic_get_items([0, 1, 2]) == [(0, 0), (1, 1), (2, 2)]
 
     class Bar:
         a: int = 1
@@ -38,7 +38,7 @@ def test_generic_get_items():
         c_: int = 3
 
     bar = Bar()
-    assert evn.dev.generic_get_items(bar) == [('a', 1)]
+    assert evn.decon.generic_get_items(bar) == [('a', 1)]
 
 @evn.item_wise_operations
 class EwiseDict(dict):
@@ -78,9 +78,7 @@ def test_item_wise_resulttypes():
 
 def test_item_wise():
     b = EwiseDict(zip('abcdefg', ([] for i in range(7))))
-    evn.icv(b)
     assert all(b.valwise == [])
-    evn.icv(b.mapwise == [])
     r = b.mapwise.append(1)
     assert all(b.valwise == [1])
     assert b['a'] == [1]
@@ -97,7 +95,6 @@ def test_item_wise_multi():
     with pytest.raises(ValueError):
         r = b.mapwise.append(1, 2)
     b.mapwise.append(*range(7))
-    evn.icv(b)
     assert list(b.values()) == [[i] for i in range(7)]
 
 def test_item_wise_equal():
@@ -141,7 +138,6 @@ def test_item_wise_slicing():
     dat = np.arange(7 * 4).reshape(7, 4)
     b = EwiseDict(zip('abcdefg', dat))
     indexed = b.npwise[1:3]
-    evn.icv(indexed)
     assert np.all(indexed == dat[:, 1:3])
 
 def test_item_wise_call_operator():
@@ -258,7 +254,6 @@ class TestElementWiseOperations(unittest.TestCase):
     def test_multiple_args(self):
         """Test operations with multiple arguments."""
         # Test with exact number of arguments
-        evn.icv(self.test_dict)
         result = self.test_dict.mapwise.__getattr__(operator.add)(10, 20, 30)
         self.assertEqual(result.a, 11)
         self.assertEqual(result.b, 22)
@@ -284,7 +279,6 @@ class TestElementWiseOperations(unittest.TestCase):
 
         # Right subtraction (special case)
         result = 10 - self.test_dict.mapwise
-        evn.icv(result)
         self.assertEqual(result.a, 9)
         self.assertEqual(result.b, 8)
         self.assertEqual(result.c, 7)
@@ -313,8 +307,6 @@ class TestElementWiseOperations(unittest.TestCase):
         container = [1, 2, 3, 4]
         testmap = EwiseDict(a=1, b=3, c=7)
         result = testmap.mapwise.contained_by(container)
-        evn.icv(self.test_container_dict)
-        evn.icv(result)
         self.assertEqual(result.a, True)  # all elements in [1,2,3] are in container
         self.assertEqual(result.b, True)  # all elements in [2,3,4] are in container
         self.assertEqual(result.c, False)  # 5 is not in container

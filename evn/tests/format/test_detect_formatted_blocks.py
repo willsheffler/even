@@ -6,7 +6,7 @@ def main():
 
 @pytest.fixture
 def ifb():
-    return evn.IdentifyFormattedBlocks()
+    return evn.format.IdentifyFormattedBlocks()
 
 def test_strange_cases(ifb):
     assert ifb.mark_formtted_blocks('', threshold=0.99) == ''

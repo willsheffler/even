@@ -14,7 +14,7 @@ import numpy as np
 
 import evn
 
-generic_get_items = evn.cherry_pick_import('evn.decontain.iterize.generic_get_items')
+generic_get_items = evn.cherry_pick_import('evn.decon.attr_access.generic_get_items')
 
 def get_available_result_types():
     return dict(
@@ -175,7 +175,7 @@ class ElementWiseDispatcher:
         """call a function on each element of self._parent, forwarding any arguments"""
         assert callable(func)
         result = self.__getattr__(func)(*a, **kw)
-        for k, v in evn.dev.generic_get_items(self._parent, all=True):
+        for k, v in generic_get_items(self._parent, all=True):
             if k[0] == '_' or k[-1] == '_':
                 with evn.cl.suppress(AttributeError):
                     setattr(result, k, v)

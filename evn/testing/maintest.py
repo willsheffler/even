@@ -20,7 +20,7 @@ class TestConfig(evn.Bunch):
         self.fixtures = self.get('fixtures', {})
         self.setup = self.get('setup', lambda: None)
         self.funcsetup = self.get('funcsetup', lambda: None)
-        self.context = self.get('context', evn.dev.nocontext)
+        self.context = self.get('context', evn.nocontext)
         self.use_test_classes = self.get('use_test_classes', True)
         self.dryrun = self.get('dryrun', False)
 
@@ -39,7 +39,7 @@ class TestResult(evn.Bunch):
             setattr(self, attr, [])
 
 def _test_func_ok(name, obj):
-    return name.startswith('test_') and callable(obj) and evn.dev.no_pytest_skip(obj)
+    return name.startswith('test_') and callable(obj) and evn.testing.no_pytest_skip(obj)
 
 def _test_class_ok(name, obj):
     return name.startswith('Test') and isinstance(obj, type) and not hasattr(obj, '__unittest_skip__')
@@ -51,18 +51,19 @@ def maintest(namespace, config=evn.Bunch(), **kw):
         print(f'maintest "{namespace["__file__"]}":', flush=True)
     else:
         print(f'maintest "{orig}":', flush=True)
-    evn.dev.onexit(evn.dev.global_timer.report, timecut=0.01, spacer=1)
+    # evn.onexit(evn.global_timer.report, timecut=0.01, spacer=1)
     config = TestConfig(**config, **kw)
     config.detect_fixtures(namespace)
-    evn.kwcall(config, evn.dev.filter_namespace_funcs, namespace)
-    timed = evn.dev.timed if config.timed else lambda f: f
+    evn.kwcall(config, evn.meta.filter_namespace_funcs, namespace)
+    # timed = evn.chrono if config.timed else lambda f: f
+    timed = lambda f: f
     test_suites, test_funcs = [], []
     for name, obj in namespace.items():
         if _test_class_ok(name, obj) and config.use_test_classes:
             test_suites.append((name, timed(obj)))
         elif _test_func_ok(name, obj):
             test_funcs.append((name, timed(obj)))
-    evn.dev.global_timer.checkpoint('maintest')
+    # evn.global_timer.checkpoint('maintest')
     result = TestResult()
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = evn.Path(tmpdir)
@@ -76,7 +77,7 @@ def maintest(namespace, config=evn.Bunch(), **kw):
         for clsname, Suite in test_suites:
             suite = Suite()
             print(f'{f" Suite: {clsname} ":=^80}', flush=True)
-            test_methods = evn.dev.filter_namespace_funcs(vars(namespace[clsname]))
+            test_methods = evn.meta.filter_namespace_funcs(vars(namespace[clsname]))
             test_methods = {k: v for k, v in test_methods.items() if _test_func_ok(k, v)}
             getattr(suite, 'setUp', lambda: None)()
             for name in test_methods:
@@ -92,7 +93,7 @@ def maintest(namespace, config=evn.Bunch(), **kw):
     return result
 
 def _maintest_run_maybe_parametrized_func(name, func, result, config, kw):
-    names, values = evn.dev.get_pytest_params(func) or ((), [()])
+    names, values = evn.testing.get_pytest_params(func) or ((), [()])
     for val in values:
         if len(names) == 1 and not isinstance(val, (list, tuple)): val = [val]
         paramkw = kw | dict(zip(names, val))
@@ -101,7 +102,7 @@ def _maintest_run_maybe_parametrized_func(name, func, result, config, kw):
 def _maintest_run_test_function(name, func, result, config, kw, check_xfail=True):
     error, testout = None, None
     nocapture = config.nocapture is True or name in config.nocapture
-    context = evn.dev.nocontext if nocapture else evn.dev.capture_stdio
+    context = evn.nocontext if nocapture else evn.capture_stdio
     with context() as testout:  # noqa
         try:
             evn.kwcall(config.fixtures, config.funcsetup)
@@ -111,7 +112,7 @@ def _maintest_run_test_function(name, func, result, config, kw, check_xfail=True
         except pytest.skip.Exception:
             result.skipexcn.append(name)
         except AssertionError as e:
-            if evn.dev.has_pytest_mark(func, 'xfail'): result.xfailed.append(name)
+            if evn.testing.has_pytest_mark(func, 'xfail'): result.xfailed.append(name)
             else: result.failed.append(name)
             error = e
         except Exception as e:  # noqa
@@ -145,7 +146,7 @@ def make_parametrized_tests(namespace: evn.MutableMapping,
                             **kw):
     for arg in args:
 
-        @evn.dev.timed(name=f'{prefix}setup')
+        @evn.chrono(name=f'{prefix}setup')
         def run_convert(arg, kw=kw):
             return evn.kwcall(kw, convert, arg)
 
@@ -158,7 +159,7 @@ def make_parametrized_tests(namespace: evn.MutableMapping,
                 def testfunc(arg=arg, func=func, processed=processed, kw=kw):
                     return evn.kwcall(kw, func, copy.copy(processed))
 
-                # c = evn.dev.timed(lambda arg, kw=kw: evn.kwcall(kw, convert, arg), name=f'{name}_setup')
+                # c = evn.chrono(lambda arg, kw=kw: evn.kwcall(kw, convert, arg), name=f'{name}_setup')
                 # testfunc = lambda func=func, arg=arg, c=c, kw=kw: evn.kwcall(kw, func, c(arg))
                 testfunc.__name__ = testfunc.__qualname__ = f'{name}_{arg}'
                 namespace[f'{name}_{str(arg).upper()}'] = testfunc

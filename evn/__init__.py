@@ -1,21 +1,23 @@
 from time import perf_counter
 
-_start, _timings = perf_counter(), dict()
+_start, _timings = perf_counter(), {}
 
 def evn_init_checkpoint(name):
     global _start, _timings
     _timings[name] = [perf_counter() - _start]
     _start = perf_counter()
 
-import contextlib
-import os
-import typing
+# import os
+import typing as t  # noqa
 import dataclasses as dc  # noqa
 import functools as ft  # noqa
 import itertools as it  # noqa
 import contextlib as cl  # noqa
+import os as os  # noqa
+import sys as sys  # noqa
 from pathlib import Path as Path
 from copy import copy as copy, deepcopy as deepcopy
+from multipledispatch import dispatch as dispatch
 from typing import (
     TYPE_CHECKING as TYPE_CHECKING,
     Any as Any,
@@ -35,8 +37,16 @@ from typing import (
 pkgroot = Path(__file__).parent.absolute()
 projroot = pkgroot.parent
 
+from icecream import ic as ic
+
+ic.configureOutput(includeContext=True)
+import builtins
+
+builtins.ic = ic  # make ic available globally
+
 evn_init_checkpoint('INIT evn basic imports')
 from evn._prelude.version import __version__ as __version__
+from evn._prelude.basic_types import NA as NA
 from evn._prelude.wraps import wraps as wraps
 from evn._prelude.import_util import (
     is_installed as is_installed,
@@ -81,41 +91,87 @@ from evn._prelude.typehints import (
     basic_typevars as basic_typevars,
 )
 # from evn._prelude.chrono import Chrono as Chrono, chrono as chrono, checkpoint as checkpoint
-from evn.decontain import iterize_on_first_param, item_wise_operations, subscriptable_for_attributes
+from evn.decofunc import (
+    iterize_on_first_param as iterize_on_first_param,
+    iterize_on_first_param_path as iterize_on_first_param_path,
+    is_iterizeable as is_iterizeable,
+    safe_lru_cache as safe_lru_cache,
+)
+from evn.decon import (
+    item_wise_operations as item_wise_operations,
+    subscriptable_for_attributes as subscriptable_for_attributes,
+)
+from evn.decon.iterables import (
+    first as first,
+    nth as nth,
+    head as head,
+    order as order,
+    reorder as reorder,
+    reorder_inplace as reorder_inplace,
+    zipenum as zipenum,
+    subsetenum as subsetenum,
+    zipmaps as zipmaps,
+    zipitems as zipitems,
+    addreduce as addreduce,  # type: ignore
+    orreduce as orreduce,  # type: ignore
+    andreduce as andreduce,  # type: ignore
+    mulreduce as mulreduce,  # type: ignore
+)
+# from evn.error import panic as panic
+# from evn.meta import kwcheck as kwcheck, kwcall as kwcall, kwcurry as kwcurry
+# from evn.metadata import get_metadata as get_metadata, set_metadata as set_metadata
+# from evn.functional import map as map, visit as visit
+# from evn.format import print_table as print_table, print as print
+from evn.decon.bunch import Bunch as Bunch, bunchify as bunchify, unbunchify as unbunchify
+# from evn.observer import hub as hub
+# from evn.tolerances import Tolerances as Tolerances
+# from evn.iterables import first as first
+# from evn.contexts import force_stdio as force_stdio
+from evn.meta import (kwcall as kwcall, kwcheck as kwcheck)
+from evn.print import make_table as make_table
+from evn.cli import CLI as CLI
 
-from evn.decontain.iterables import zipmaps, zipitems
-from evn.meta import NA as NA, kwcall as kwcall
-from evn import dev, doc, format, meta
-from evn.print import make_table
-from evn.cli import CLI
+from evn.dev import (
+    capture_asserts as capture_asserts,
+    capture_stdio as capture_stdio,
+    catch_em_all as catch_em_all,
+    cd as cd,
+    force_stdio as force_stdio,
+    just_stdout as just_stdout,
+    nocontext as nocontext,
+    redirect as redirect,
+    set_class as set_class,
+    trace_writes_to_stdout as trace_writes_to_stdout,
+    inspect as inspect,
+    show as show,
+    diff as diff,
+)
 
-from icecream import ic as ic
-ic.configureOutput(includeContext=True)
-import builtins
-builtins.ic = ic  # make ic available globally
+from evn import (
+    config as config,
+    cli as cli,
+    dev as dev,
+    decofunc as decofunc,
+    decon as decon,
+    doc as doc,
+    format as format,
+    meta as meta,
+    testing as testing,
+    tree as tree,
+    tool as tool,
+)
 
-# optional_imports = cherry_pick_import('evn.dev.contexts.optional_imports')
-# capture_stdio = cherry_pick_import('evn.dev.contexts.capture_stdio')
-# ic, icm, icv = cherry_pick_imports('evn.dev.debug', 'ic icm icv')
-# timed = cherry_pick_import('evn.dev.instrumentation.timer.timed')
-# item_wise_operations = cherry_pick_import('evn.dev.item_wise.item_wise_operations')
-# subscriptable_for_attributes = cherry_pick_import('evn.dev.decorators.subscriptable_for_attributes')
-# iterize_on_first_param = cherry_pick_import('evn.dev.decorators.iterize_on_first_param')
+# optional_imports = cherry_pick_import('evn.contexts.optional_imports')
+# capture_stdio = cherry_pick_import('evn.contexts.capture_stdio')
+# ic, icm, icv = cherry_pick_imports('evn.debug', 'ic icm icv')
+# timed = cherry_pick_import('evn.instrumentation.timer.timed')
+# item_wise_operations = cherry_pick_import('evn.item_wise.item_wise_operations')
+# subscriptable_for_attributes = cherry_pick_import('evn.decorators.subscriptable_for_attributes')
+# iterize_on_first_param = cherry_pick_import('evn.decorators.iterize_on_first_param')
 
 # _global_chrono = None
 
 # evn_init_checkpoint('INIT evn prelude imports')
-
-# from evn.dev.error import panic as panic
-# from evn.dev.meta import kwcheck as kwcheck, kwcall as kwcall, kwcurry as kwcurry
-# from evn.dev.metadata import get_metadata as get_metadata, set_metadata as set_metadata
-# from evn.dev.functional import map as map, visit as visit
-# from evn.dev.format import print_table as print_table, print as print
-# from evn.bunch import Bunch as Bunch, bunchify as bunchify, unbunchify as unbunchify
-# from evn.observer import hub as hub
-# from evn.dev.tolerances import Tolerances as Tolerances
-# from evn.dev.iterables import first as first
-# from evn.dev.contexts import stdio as stdio, catch_em_all as catch_em_all
 
 # evn_init_checkpoint('INIT evn from subpackage imports')
 # from evn import dev as dev, homog as homog
@@ -140,7 +196,7 @@ builtins.ic = ic  # make ic available globally
 # else:
 #     atom = lazyimport('evn.atom')
 #     crud = lazyimport('evn.crud')
-#     cuda = lazyimport('evn.dev.cuda')
+#     cuda = lazyimport('evn.cuda')
 #     h = lazyimport('evn.homog.thgeom')
 #     hnumpy = lazyimport('evn.homog.hgeom')
 #     htorch = lazyimport('evn.homog.thgeom')
@@ -148,7 +204,7 @@ builtins.ic = ic  # make ic available globally
 #     motif = lazyimport('evn.motif')
 #     pdb = lazyimport('evn.pdb')
 #     protocol = lazyimport('evn.protocol')
-#     qt = lazyimport('evn.dev.qt')
+#     qt = lazyimport('evn.qt')
 #     sel = lazyimport('evn.sel')
 #     sym = lazyimport('evn.sym')
 #     tests = lazyimport('evn.tests')

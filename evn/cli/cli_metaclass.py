@@ -102,12 +102,12 @@ class CliMeta(type):
             handlers = ClickTypeHandlers(getattr(base, '__type_handlers__', {}))
             cls.__all_type_handlers__.append(handlers)
 
-        if (callback := getattr(cls, '_callback', None)):
+        if (callback := cls.__dict__.get('_callback', None)):
+            callback = cls_to_instance_method(cls)(callback)
             decorated = auto_click_decorate_command(callback, cls.__all_type_handlers__)
             # print('<<< instantiating partilly created class, may be sketchy >>>')
-            method = cls_to_instance_method(cls)(decorated)
             cls.__group__ = click.command(cls=AliasedGroup, name=cls_to_groupname(cls),
-                                          help=callback.__doc__)(method)
+                                          help=callback.__doc__)(decorated)
         else:
             cls.__group__ = AliasedGroup(name=cls_to_groupname(cls), help=cls.__doc__)
         CliLogger.log(cls, f"Registered group: {cls.__group__.name}", event="group_registered")
@@ -191,6 +191,7 @@ def walk_click_group(group: click.Group = CLI.__group__, visitor=lambda *a: None
         top-level, top-level.subcommand, ...
     """
     commands = []
+
     def walk(g: click.Group, path: str = ''):
         path = path or group.name
         visitor(g, path)

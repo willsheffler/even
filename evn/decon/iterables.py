@@ -9,7 +9,7 @@ T = typing.TypeVar('T')
 def nth(thing: evn.Iterable[T], n: int = 0) -> T:
     iterator = iter(thing)
     try:
-        for i in range(n):
+        for _ in range(n):
             next(iterator)
         return next(iterator)
     except StopIteration:
@@ -20,9 +20,9 @@ first = nth
 def head(thing: evn.Iterable[T], n=5, *, requireall=False, start=0) -> list[T]:
     iterator, result = iter(thing), []
     try:
-        for i in range(start):
+        for _ in range(start):
             next(iterator)
-        for i in range(n):
+        for _ in range(n):
             result.append(next(iterator))
     except StopIteration:
         if requireall: return None
@@ -62,8 +62,8 @@ def subsetenum(n_or_set):
 
 def zipmaps(*args: dict[str, T], order='key', intersection=False) -> dict[str, tuple[T, ...]]:
     if not args: raise ValueError('zipmaps requires at lest one argument')
-    if intersection: keys = evn.dev.andreduce(set(map(str, a.keys())) for a in args)
-    else: keys = evn.decontain.orreduce(set(map(str, a.keys())) for a in args)
+    if intersection: keys = evn.andreduce(set(map(str, a.keys())) for a in args)
+    else: keys = evn.decon.orreduce(set(map(str, a.keys())) for a in args)
     if order == 'key': keys = sorted(keys)
     if order == 'val': keys = sorted(keys, key=lambda k: args[0].get(k, evn.NA))
     result = type(args[0])({k: tuple(a.get(k, evn.NA) for a in args) for k in keys})
@@ -75,24 +75,27 @@ def zipitems(*args, **kw):
         yield k, *v
 
 @evn.dc.dataclass
-class UniqueIDs:
-    alphabet: Sequence = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz"
+class ContiguousTokens:
+    tokens: Sequence = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz"
     idmap: dict = evn.dc.field(default_factory=dict)
-    offset: int = 0
+    _offset: int = 0
 
     def __call__(self, ids: np.ndarray, reset=False):
         if reset:
-            self.offset += len(self.idmap)
+            self._offset += len(self.idmap)
             self.idmap.clear()
         uniq = set(np.unique(ids))
         for cid in uniq - set(self.idmap):
-            self.idmap[str(cid)] = self.alphabet[(len(self.idmap) - self.offset) % len(self.alphabet)]
+            self.idmap[str(cid)] = self.tokens[(len(self.idmap) - self._offset) % len(self.tokens)]
         newids = evn.copy(ids)
         for u in uniq:
             newids[ids == u] = self.idmap[u]
-        # evn.icv(self.idmap)
+        # ic(self.idmap)
         return newids
 
+def contiguous(ids, reset: bool = False, tokens: Sequence['int|str'] = None):
+    idmaker = ContiguousTokens(*([tokens] if tokens else []))
+    return idmaker(ids, reset)
 
 def opreduce(op, iterable):
     """Reduces an iterable using a specified operator or function.

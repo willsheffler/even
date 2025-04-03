@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 import evn
-from evn.decontain.bunch import bunchfind, Bunch, make_autosave_hierarchy
+from evn.decon.bunch import bunchfind, Bunch, make_autosave_hierarchy
 
 config_test = Bunch(
     re_only=[
@@ -25,15 +25,42 @@ def main():
     )
 
 def assert_saved_ok(b):
-    with open(b._special['autosave']) as inp:
+    with open(b._config['autosave']) as inp:
         b2 = make_autosave_hierarchy(yaml.load(inp, yaml.Loader))
     assert b == b2
 
-def test_bunch_split_space():
-    test = Bunch(a='a',_split_space=True)
+def test_bunch_split_nest():
+    test = Bunch(a='a',_split=' ')
     test['foo bar baz'] = 8
-    test['foo bar2 baz'] = 8
-    print(test)
+    test['foo bar baz2'] = 7
+    test['foo bar2 baz'] = 6
+    with pytest.raises(TypeError):
+        test['foo bar2 baz but'] = 5
+    assert test.foo.bar.baz == 8
+    assert test.foo.bar.baz2 == 7
+    assert test.foo.bar2.baz == 6
+    # assert test.foo.bar2.baz.but == 5
+
+def test_bunch_split_space():
+    test = Bunch(a='a',_split=' ')
+    test['foo bar baz'] = 8
+    test['foo bar2 baz'] = 6
+    assert test.foo.bar.baz == 8
+    assert test.foo.bar2.baz == 6
+
+def test_bunch_split_space_get():
+    test = Bunch(a='a',_split=' ')
+    test['foo bar baz'] = 8
+    test['foo bar2 baz'] = 6
+    assert test.foo.bar.baz == 8
+    assert test.foo.bar2.baz == 6
+    assert test._get_split('foo bar baz') == 8
+    assert test._get_split('foo bar2 baz') == 6
+
+def test_bunch_split_dot():
+    test = Bunch(a='a',_split='.')
+    test['foo.bar.baz'] = 8
+    test['foo.bar2.baz'] = 8
     assert test.foo.bar.baz == 8
     assert test.foo.bar2.baz == 8
 
@@ -356,6 +383,16 @@ def test_bunch_underscore():
     data = Bunch(_foo='bar', foo_='baz')
     assert data._foo == 'bar'
     assert data.foo_ == 'baz'
+
+def test_bunch_merge():
+    a = Bunch(b=Bunch(c=Bunch(d=1)))
+    b = Bunch(b=Bunch(c=Bunch(b=2)))
+    a._merge(b)
+    assert a.b.c == Bunch(d=1, b=2)
+    c = Bunch(b=Bunch(c=Bunch(b=8)))
+    a._merge(c)
+    assert a.b.c == Bunch(d=1, b=8)
+
 
 if __name__ == "__main__":
     main()

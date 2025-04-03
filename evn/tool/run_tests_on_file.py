@@ -109,7 +109,7 @@ def testfile_of(projects, path, bname, debug=False, **kw) -> str:
 # def locate_fname(fname):
 #     'locate file in sys.path'
 #     if os.path.exists(fname): return fname
-#     candidates = [fn for fn in evn.dev.project_files() if fn.endswith(fname)]
+#     candidates = [fn for fn in evn.project_files() if fn.endswith(fname)]
 #     if len(candidates) == 1: return candidates[0]
 #     if len(candidates) == 0: raise FileNotFoundError(f'file {fname} not found in git project')
 #     raise FileNotFoundError(f'file {fname} found ambiguous {candidates} in git project')
@@ -145,7 +145,7 @@ def dispatch(
         if testfile := testfile_of(projects, path, bname, **kw):
             if not os.path.exists(testfile) and fname.endswith('.py'):
                 print('autogen test file', testfile)
-                os.system(f'{sys.executable} -mipd code make_testfile {fname} {testfile}')
+                os.system(f'{sys.executable} -mevn create testfile {fname} {testfile}')
                 os.system(f'subl {testfile}')
                 sys.exit()
             fname = testfile

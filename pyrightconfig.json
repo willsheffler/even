@@ -4,6 +4,7 @@
     // "venvPath": "/home/sheffler/rfd/lib/evn",
     // "venv": ".venv",
     "defineConstant": { "DEBUG": true },
+    // "typeCheckingMode": "enhanced",
     "typeCheckingMode": "standard",
     "reportMissingImports": true,
     "reportMissingTypeStubs": false,

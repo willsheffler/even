@@ -1,31 +1,18 @@
 """
-Decorators and Utilities for Enhanced Functionality
-=====================================================
+Decorators and Utilities for Enhanced Container Functionality
+===============================================================
 
 This module provides a collection of decorators and helper functions designed to extend the
 behavior of functions and classes. Key features include:
 
 - **Vectorization**: Use :func:`iterize_on_first_param` to automatically vectorize a function
   over its first parameter.
-- **Random State Preservation**: Use :func:`preserve_random_state` to temporarily set a random seed
-  during a function call.
 - **Enhanced Attribute Access**: The :func:`subscriptable_for_attributes` decorator adds support
   for subscriptable attribute access, fuzzy matching, enumeration, and grouping.
-- **Safe Caching**: :func:`safe_lru_cache` provides an LRU cache that handles unhashable arguments gracefully.
-- **Utility Functions**: Other helpers (e.g. :func:`generic_get_keys`, :func:`is_iterizeable`)
+- **Utility Functions**: Other helpers (e.g. :func:`generic_get_keys`)
   provide common functionality for attribute and iterable handling.
 
 Examples:
-    Vectorizing a function over scalars and iterables::
-
-        >>> @iterize_on_first_param
-        ... def square(x):
-        ...     return x * x
-        >>> square(4)
-        16
-        >>> square([1, 2, 3])
-        [1, 4, 9]
-
     Making a class subscriptable for attribute access::
 
         >>> @subscriptable_for_attributes
@@ -40,13 +27,7 @@ Examples:
         (1, 2)
 """
 
-import contextlib
-import functools
-from pathlib import Path
-from typing import Mapping, Any, Iterable
-
-import numpy as np
-
+from typing import Any, Iterable
 import evn
 
 def NoneFunc():
@@ -92,227 +73,6 @@ def subscriptable_for_attributes(cls: type[evn.C]) -> type[evn.C]:
     cls.groupby = generic_groupby
     cls.pick = make_getitem_for_attributes(provide='item')
     return cls
-
-def iterize_on_first_param(
-    func0: evn.F = NoneFunc,
-    *,
-    basetype: 'str|type|tuple[type,...]' = str,
-    splitstr=True,
-    asdict=False,
-    asbunch=False,
-    asnumpy=False,
-    allowmap=False,
-    nonempty=False,
-) -> evn.F:
-    """
-    Decorator to vectorize a function over its first parameter.
-
-    This decorator allows a function to seamlessly handle both scalar and iterable inputs for its first
-    parameter. When the first argument is iterable (and not excluded by type), the function is applied
-    to each element individually. The results are then combined and returned in a format determined by the
-    decorator options.
-
-    :param func0: The function to decorate. Can be omitted when using decorator syntax with arguments.
-    :param basetype: Type(s) that should be treated as scalar, even if iterable. Defaults to str.
-    :param splitstr: If True, strings containing spaces are split into lists before processing.
-                     Defaults to True.
-    :param asdict: If True, returns results as a dictionary with input values as keys. Defaults to False.
-    :param asbunch: If True, returns results as a Bunch (a dict-like object with attribute access).
-                    Defaults to False.
-    :param asnumpy: If True, returns results as a numpy array. Defaults to False.
-    :param allowmap: If True, allows mapping types (e.g. dict) to be processed iteratively. Defaults to False.
-    :return: A decorated function that can handle both scalar and iterable inputs for its first parameter.
-    :rtype: callable
-
-    Examples:
-        Basic usage:
-        >>> @iterize_on_first_param
-        ... def square(x):
-        ...     return x * x
-        >>> square(4)
-        16
-        >>> square([1, 2, 3])
-        [1, 4, 9]
-
-        Using asdict to return results as a dictionary:
-        >>> @iterize_on_first_param(asdict=True, basetype=str)
-        ... def double(x):
-        ...     return x * 2
-        >>> double(['a', 'b'])
-        {'a': 'aa', 'b': 'bb'}
-
-        **Basic usage with default behavior**:
-
-        >>> @iterize_on_first_param
-        ... def square(x):
-        ...     return x * x
-        ...
-        >>> square(5)
-        25
-        >>> square([1, 2, 3])
-        [1, 4, 9]
-
-        **Using `basetype` to prevent iteration over strings**:
-
-        >>> @iterize_on_first_param(basetype=str)
-        ... def process(item):
-        ...     return len(item)
-        ...
-        >>> process("hello")  # Treated as scalar despite being iterable
-        5
-        >>> process(["hello", "world"])
-        [5, 5]
-
-        **Using `asdict` to return results as a dictionary**:
-
-        >>> @iterize_on_first_param(asdict=True)
-        ... def double(x):
-        ...     return x * 2
-        ...
-        >>> double([1, 2, 3])
-        {1: 2, 2: 4, 3: 6}
-
-        **Using `asbunch` to return results as a Bunch**:
-
-        >>> @iterize_on_first_param(asbunch=True)
-        ... def triple(x):
-        ...     return x * 3
-        ...
-        >>> result = triple(["a", "b"])
-        >>> result.a
-        'aaa'
-        >>> result.b
-        'bbb'
-
-        **Using `allowmap` to enable mapping support**:
-
-        >>> @iterize_on_first_param(allowmap=True)
-        ... def negate(x):
-        ...     return -x
-        ...
-        >>> negate({"a": 1, "b": 2})
-        {'a': -1, 'b': -2}
-
-    Notes:
-        - The decorator can be applied with or without parentheses.
-        - If `asdict` and `asbunch` are both `True`, `asbunch` takes precedence.
-        - If `allowmap` is `True`, the decorator will apply the function to the values
-          of the mapping and return a new mapping.
-    """
-
-    def deco(func: evn.F) -> evn.F:
-
-        @evn.wraps(func)
-        def wrapper(arg0, *args, **kw):
-            if is_iterizeable(arg0, basetype=basetype, splitstr=splitstr, allowmap=allowmap):
-                if splitstr and isinstance(arg0, str) and ' ' in arg0:
-                    arg0 = arg0.split()
-                if allowmap and isinstance(arg0, Mapping):
-                    result = {k: func(v, *args, **kw) for k, v in arg0.items()}
-                elif asdict or asbunch:
-                    result = {a0: func(a0, *args, **kw) for a0 in arg0}
-                else:
-                    result = [func(a0, *args, **kw) for a0 in arg0]
-                    with contextlib.suppress(TypeError, ValueError):
-                        resutn = type(arg0)(result)
-                if nonempty and evn.islist(result): result = list(filter(len, result))
-                if nonempty and evn.isdict(result): {k:v for k,v in result.items() if len(v)}
-                if asbunch and result and isinstance(evn.first(result.keys()), str):
-                    result = evn.Bunch(result)
-                if asnumpy:
-                    result = np.array(result)
-                return result
-            return func(arg0, *args, **kw)
-
-        return wrapper
-
-    if func0 is not NoneFunc:  # handle case with no call/args
-        assert callable(func0)
-        return deco(func0)
-    return deco
-
-iterize_on_first_param_path = iterize_on_first_param(basetype=(str, Path))
-
-def preserve_random_state(func0=None, seed0=None):
-    """Decorator to preserve the random state during function execution.
-
-    This decorator sets a temporary random seed during the execution of the decorated function.
-    If a `seed` is passed as a keyword argument to the function, it will override the default seed.
-
-    Args:
-        func0 (callable, optional): The function to decorate. If provided, the decorator can be used without parentheses.
-        seed0 (int, optional): The default random seed to use if not overridden by a `seed` keyword argument.
-
-    Returns:
-        callable: The decorated function.
-
-    Raises:
-        AssertionError: If `func0` is provided but is not callable or if `seed0` is not None when `func0` is used.
-    """
-
-    def deco(func):
-
-        @evn.wraps(func)
-        def wrapper(*args, **kw):
-            with evn.dev.temporary_random_seed(seed=kw.get('seed', seed0)):
-                return func(*args, **kw)
-
-        return wrapper
-
-    if func0:  # handle case with no call/args
-        assert callable(func0)
-        assert seed0 is None
-        return deco(func0)
-    return deco
-
-def safe_lru_cache(func=None, *, maxsize=128):
-    """
-    A safe LRU cache decorator that handles unhashable arguments gracefully.
-
-    This decorator wraps a function with an LRU cache. If the arguments are hashable, the cached value
-    is returned; if unhashable (raising a TypeError), the function is executed normally without caching.
-
-    :param func: The function to decorate. If omitted, the decorator can be used with arguments.
-    :param maxsize: The maximum size of the cache. Defaults to 128.
-    :return: The decorated function.
-    :rtype: callable
-
-    Examples:
-        Basic usage:
-        >>> @safe_lru_cache(maxsize=32)
-        ... def double(x):
-        ...     return x * 2
-        >>> double(2)
-        4
-        >>> double([1, 2, 3])  # Unhashable input; executes without caching.
-        [1, 2, 3, 1, 2, 3]
-
-        Using without arguments:
-        >>> @safe_lru_cache
-        ... def add(x, y):
-        ...     return x + y
-        >>> add(2, 3)
-        5
-    """
-    if func is not None and callable(func):
-        # Case when used as @safe_lru_cache without parentheses
-        return safe_lru_cache(maxsize=maxsize)(func)
-
-    def decorator(func):
-        cache = functools.lru_cache(maxsize=maxsize)(func)
-
-        @evn.wraps(func)
-        def wrapper(*args, **kwargs):
-            try:
-                hash(args)
-                frozenset(kwargs.items())
-                return cache(*args, **kwargs)
-            except TypeError:
-                return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
 
 # helper functions
 
@@ -453,50 +213,12 @@ def get_fields(obj, fields: evn.FieldSpec, exclude: evn.FieldSpec = ()) -> tuple
     if isinstance(fields, str): return [fields], False
     return fields, True
 
-def is_iterizeable(arg, basetype: type = str, splitstr: bool = True, allowmap: bool = False) -> bool:
-    """
-    Determine if an object should be treated as iterable for vectorization purposes.
-
-    This function checks several conditions:
-      - Strings with spaces are considered iterable if `splitstr` is True.
-      - Objects of the type specified by `basetype` are treated as scalars.
-      - Mapping types are not considered iterable unless `allowmap` is True.
-
-    :param arg: The object to test.
-    :param basetype: A type (or tuple of types) that should be considered scalar. Defaults to str.
-    :param splitstr: If True, strings containing spaces are considered iterable. Defaults to True.
-    :param allowmap: If False, mapping types (e.g. dict) are not treated as iterable. Defaults to False.
-    :return: True if the object is considered iterable, False otherwise.
-    :rtype: bool
-
-    Examples:
-        >>> is_iterizeable([1, 2, 3])
-        True
-        >>> is_iterizeable("hello")
-        False
-        >>> is_iterizeable("hello world")
-        True
-        >>> is_iterizeable({'a': 1})
-        False
-        >>> is_iterizeable({'a': 1}, allowmap=True)
-        True
-    """
-    if isinstance(basetype, str):
-        if basetype == 'notlist': return isinstance(arg, list)
-        elif arg.__class__.__name__ == basetype: basetype = type(arg)
-        elif arg.__class__.__qualname__ == basetype: basetype = type(arg)
-        else: basetype = type(None)
-    if isinstance(arg, str) and ' ' in arg: return True
-    if basetype and isinstance(arg, basetype): return False
-    if not allowmap and isinstance(arg, Mapping): return False
-    if hasattr(arg, '__iter__'): return True
-    return False
 
 def make_getitem_for_attributes(get=getattr, provide='value') -> 'Any':
     if provide not in ('value', 'item'):
         raise ValueError(f"provide must be 'value' or 'item', not {provide}")
 
-    def getitem_for_attributes(self, field: evn.FieldSpec, get=get) -> 'Any':
+    def getitem_for_attributes(self, fields: evn.FieldSpec, get=get) -> 'Any':
         """Enhanced `__getitem__` method to support attribute access with multiple keys.
 
     If the field is a string containing spaces, it will be split into a list of keys.
@@ -514,13 +236,22 @@ def make_getitem_for_attributes(get=getattr, provide='value') -> 'Any':
         >>> values = obj['x y z']  # Multiple keys as a string
         >>> values = obj[['x', 'y', 'z']]  # Multiple keys as a list
     """
-        field, plural = get_fields(self, field)
+        # try:
+        field, plural = get_fields(self, fields)
         if provide == 'value':
             if plural: return tuple(get(self, k) for k in field)
             else: return get(self, field[0])
         if provide == 'item':
             if plural: return evn.Bunch((k, get(self, k)) for k in field)
             return (field[0], get(self, field[0]))
+
+    # except AttributeError as e:
+    #     # print(fields)
+    #     if isinstance(self, evn.Bunch):
+    #         if ' ' in self._conf('split'):
+    #             print(fields)
+    #             return self.__getitem__(fields)
+    #     raise e from None
 
     return getitem_for_attributes
 

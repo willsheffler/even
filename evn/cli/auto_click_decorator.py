@@ -124,7 +124,7 @@ def auto_click_decorate_command(fn, type_handlers: list[ClickTypeHandlers]):
 
     decorators = []
     params = list(sig.parameters.items())
-    if params and params[0][0] == "self":
+    if params and params[0][0] in ('self', 'cls'):
         params = params[1:]  # Skip "self"
 
     arghelp = extract_param_help(fn.__doc__ or "")

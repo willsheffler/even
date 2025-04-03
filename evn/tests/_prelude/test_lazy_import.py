@@ -33,7 +33,7 @@ def test_lazyimport_re():
 def test_lazyimport_this():
     this = evn.lazyimport('this')
     assert not this._lazymodule_is_loaded()
-    with evn.dev.capture_stdio() as poem:
+    with evn.capture_stdio() as poem:
         assert this.c == 97
     assert 'The Zen of Python, by Tim Peters' == evn.first(poem.readlines()).strip()
     assert this._lazymodule_is_loaded()

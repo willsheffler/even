@@ -18,11 +18,11 @@ def print(*args, **kw):
 def make_table(thing, precision=3, expand=False, **kw):
     kw['precision'] = precision
     kw['expand'] = expand
-    with evn.dev.np_printopts(precision=precision, suppress=True):
-        if evn.homog.is_tensor(thing): return make_table_list(thing, **kw)
+    with evn.np_printopts(precision=precision, suppress=True):
+        # if evn.homog.is_tensor(thing): return make_table_list(thing, **kw)
         if isinstance(thing, evn.Bunch): return make_table_bunch(thing, **kw)
         if isinstance(thing, dict): return make_table_dict(thing, **kw)
-        if isinstance(thing, (list, tuple)): return make_table_list(thing, **kw)
+        # if isinstance(thing, (list, tuple)): return make_table_list(thing, **kw)
         xr = evn.maybeimport('xarray')
         if xr and isinstance(thing, xr.Dataset): return make_table_dataset(thing, **kw)
         raise TypeError(f'cant make table for {type(thing)}')
@@ -130,7 +130,7 @@ def to_renderable(obj, textmap=None, strip=True, nohomog=False, precision=3, **k
 # @iterize_on_first_param(allowmap=True)
 def summary(obj) -> str:
     if hasattr(obj, 'summary'): return obj.summary()
-    if evn.homog.is_tensor(obj): return evn.homog.tensor_summary(obj)
+    # if evn.homog.is_tensor(obj): return evn.homog.tensor_summary(obj)
     if (bs := sys.modules.get('biotite.structure')) and isinstance(obj, bs.AtomArray):
         return f'AtomArray({len(obj)})'
     if isinstance(obj, (list, tuple)): return [summary(o) for o in obj]

@@ -18,10 +18,10 @@ def main():
 
 def test_locals():
     foo, bar, baz = 1, 2, 3
-    assert evn.dev.picklocals('foo bar') == dict(foo=1, bar=2)
+    assert evn.picklocals('foo bar') == dict(foo=1, bar=2)
 
 def test_addreduce():
-    assert evn.dev.addreduce([[1], [2, 3], [4]]) == [1, 2, 3, 4]
+    assert evn.addreduce([[1], [2, 3], [4]]) == [1, 2, 3, 4]
 
 @pytest.mark.xfail
 def test_get_function_for_which_call_to_caller_is_argument():
@@ -30,7 +30,7 @@ def test_get_function_for_which_call_to_caller_is_argument():
         ...
 
     def CALLED_TO_PRODUCE_ARGUMENT():
-        uncle_func = evn.dev.get_function_for_which_call_to_caller_is_argument()
+        uncle_func = evn.get_function_for_which_call_to_caller_is_argument()
         assert uncle_func == FIND_THIS_FUNCTION
 
     FIND_THIS_FUNCTION(1, 2, CALLED_TO_PRODUCE_ARGUMENT(), 3)
@@ -199,7 +199,7 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_default_behavior(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map)
+        evn.filter_namespace_funcs(map)
         assert 'test_func1' in map
         assert 'test_func2' in map
         assert 'test_funcA' in map
@@ -209,7 +209,7 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_only(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, only=('test_func1', ))
+        evn.filter_namespace_funcs(map, only=('test_func1', ))
         assert 'test_func1' in map
         assert 'test_func2' not in map
         assert 'test_funcA' not in map
@@ -218,13 +218,13 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_exclude(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, exclude=('test_func1', ))
+        evn.filter_namespace_funcs(map, exclude=('test_func1', ))
         assert 'test_func1' not in map
         assert 'test_func2' in map
 
     def test_re_only(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, re_only=('test_func[0-9]', ))
+        evn.filter_namespace_funcs(map, re_only=('test_func[0-9]', ))
         assert 'test_func1' in map
         assert 'test_func2' in map
         assert 'test_funcA' not in map
@@ -233,7 +233,7 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_re_exclude(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, re_exclude=('test_func[0-9]', ))
+        evn.filter_namespace_funcs(map, re_exclude=('test_func[0-9]', ))
         assert 'test_func1' not in map
         assert 'test_func2' not in map
         assert 'test_funcA' in map
@@ -242,7 +242,7 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_re_only_letters(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, re_only=('test_func[A-Z]', ))
+        evn.filter_namespace_funcs(map, re_only=('test_func[A-Z]', ))
         assert 'test_func1' not in map
         assert 'test_func2' not in map
         assert 'test_funcA' in map
@@ -251,7 +251,7 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_combination_only_and_exclude(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, only=('test_func1', ), exclude=('test_func1', ))
+        evn.filter_namespace_funcs(map, only=('test_func1', ), exclude=('test_func1', ))
         assert 'test_func1' not in map
         assert 'test_func2' not in map
         assert 'test_funcA' not in map
@@ -259,7 +259,7 @@ class TestFilterMapping(unittest.TestCase):
 
     def test_combination_re_only_and_re_exclude(self):
         map = self.map.copy()
-        evn.dev.filter_namespace_funcs(map, re_only=('test_func[0-9]', ), re_exclude=('test_func1', ))
+        evn.filter_namespace_funcs(map, re_only=('test_func[0-9]', ), re_exclude=('test_func1', ))
         assert 'test_func1' not in map
         assert 'test_func2' in map
         assert 'test_funcA' not in map

@@ -29,9 +29,36 @@
     "build_systems":
     [
         {
+            "name": "pytest cli",
+            "working_dir": "$folder",
+            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/cli/test_cli_config.py -sx 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^E?(.+\\.py):([0-9]+): "
+
+        },
+        {
+            "name": "pytest treediff",
+            "working_dir": "$folder",
+            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/tree 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^E?(.+\\.py):([0-9]+): "
+
+        },
+        {
             "name": "pytest",
             "working_dir": "$folder",
-            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/decontain/test_bunch.py evn/tests/config evn/tests/cli evn/cli  -s 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/decon evn/tests/config evn/tests/cli evn/cli evn/tests/format -x 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^E?(.+\\.py):([0-9]+): "
+
+        },
+        {
+            "name": "pytest file",
+            "working_dir": "$folder",
+            "shell_cmd": "PYTHONPATH=. \\$PYTEST --doctest-modules $file -svx 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
@@ -82,7 +109,7 @@
         // },
         // {
         //     "name": "nox files",
-        //     "shell_cmd": "cd $folder; uv pip install pip pytest pytest-xdist numpy; uv pip install --no-index --find-links=wheelhouse evn[dev]; uv run pytest $file 2>&1 | tee $folder/ide/sublime_build.log",
+        //     "shell_cmd": "cd $folder; uv pip install pip pytest pytest-xdist numpy; uv pip install --no-index --find-links=wheelhouse evn]; uv run pytest $file 2>&1 | tee $folder/ide/sublime_build.log",
         //     "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
         // },
         // {
