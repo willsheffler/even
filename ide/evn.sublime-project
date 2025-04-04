@@ -29,9 +29,16 @@
     "build_systems":
     [
         {
+            "name": "run file",
+            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTHON $file 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^(.+\\.py):([0-9]+): "
+
+        },
+        {
             "name": "pytest cli",
             "working_dir": "$folder",
-            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/cli/test_cli_config.py -sx 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "PYTHONPATH=. \\$PYTHON evn/tests/cli/test_cli_config.py 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^E?(.+\\.py):([0-9]+): "
@@ -49,7 +56,7 @@
         {
             "name": "pytest",
             "working_dir": "$folder",
-            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/decon evn/tests/config evn/tests/cli evn/cli evn/tests/format -x 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/decon evn/tests/config evn/tests/cli evn/cli evn/tests/format -xs 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^E?(.+\\.py):([0-9]+): "
@@ -74,13 +81,6 @@
 
         },
 
-        {
-            "name": "run file",
-            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTHON $file 2>&1 | tee $folder/ide/sublime_build.log",
-            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-            "file_regex": "^(.+\\.py):([0-9]+): "
-
-        },
         {
             "name": "doit",
             "shell_cmd": "cd $folder; doit 2>&1 | tee $folder/ide/sublime_build.log; evn -i -f boilerplate $folder/ide/sublime_build.log",

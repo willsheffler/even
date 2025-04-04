@@ -5,6 +5,7 @@ from typing import (
     Any,
     Callable,
     cast as cast,
+    IO,
     Iterator,
     TypeVar,
     Union,
@@ -18,6 +19,8 @@ from typing_extensions import ParamSpec  # type: ignore noqa
 import numpy as np
 
 KW = dict[str, Any]
+IOBytes = IO[bytes]
+IO = IO[str]
 """Type alias for keyword arguments represented as a dictionary with string keys and any type of value."""
 
 FieldSpec = Union[str, list[str], tuple[str], Callable[..., str], tuple]

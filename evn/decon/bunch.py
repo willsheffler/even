@@ -48,13 +48,15 @@ class Bunch(dict, Generic[T]):
         self,
         __arg_or_ns=None,
         _strict='__STRICT',
-        _default='__NODEFALT',
+        _default: t.Any = '__NODEFALT',
         _storedefault=True,
         _autosave=None,
         _autoreload=None,
         _parent=None,
         _split='',
         _like=None,
+        _frozen=False,
+        _flagmode=False,
         **kw,
     ):
         if __arg_or_ns is not None:
@@ -73,6 +75,8 @@ class Bunch(dict, Generic[T]):
         conf["autosave"] = str(_autosave) if _autosave else None
         conf["autoreload"] = _autoreload
         conf["split"] = _split
+        conf["frozen"] = _frozen
+        conf["flagmode"] = _flagmode
         if conf['autoreload']:
             Path(conf['autoreload']).touch()
             with open(conf['autoreload'], 'rb') as inp:
@@ -151,16 +155,20 @@ class Bunch(dict, Generic[T]):
         return self
 
     def default(self, key):
-        dflt = self._conf('default')
-        if dflt == 'bunchwithparent':
+        default = self._conf('default')
+        if default == 'bunchwithparent':
             new = Bunch(_parent=(self, None), _default='bunchwithparent', _strict=self._conf('strict_lookup'))
             special = new._config.copy()
             special['parent'] = id(special['parent'])
             # print('new child bunch:', key)  #, '_config:', special)
             return new
-        if dflt == Bunch: return Bunch(_like=self)
-        if hasattr(dflt, "__call__"): return dflt()
-        else: return dflt
+        if default == Bunch: return Bunch(_like=self)
+        if not callable(default):
+            return default
+        try:
+            return default()
+        except TypeError:
+            return default(key)
 
     def __eq__(self, other):
         self._autoreload_check()
@@ -180,6 +188,7 @@ class Bunch(dict, Generic[T]):
 
     def accumulate(self, other, strict=True):
         "accumulate all keys in other, adding empty lists if k not in self, extend other[k] is list"
+        if self._conf('frozen'): raise ValueError("Bunch is frozen")
         self._autoreload_check()
         if isinstance(other, list):
             for b in other:
@@ -203,20 +212,24 @@ class Bunch(dict, Generic[T]):
 
     def __contains__(self, k):
         self._autoreload_check()
-        if k == "_config":
-            return False
+        if k == "_conf": return False
+        if self._conf('flagmode'):
+            return self._contains_flagmode(k)
+        return self._contains(k)
+
+    def _contains(self, k):
         try:
             return dict.__contains__(self, k) or k in self.__dict__
-        except:  # noqa
+        except KeyError:
             return False
 
-    def is_strict(self):
-        return self.__dict__['_config']["strict_lookup"]
-
-    # try:
-    # super().__getitem__(key)
-    # except KeyError:
-    # return self.__dict__['_config']('default')()
+    def _contains_flagmode(self, k):
+        try:
+            return self[k]
+        except (KeyError, AttributeError):
+            assert 0
+            self[k] = self._default(k)
+            return self[k]
 
     def __getattr__(self, k: str) -> T:
         self._autoreload_check()
@@ -224,10 +237,10 @@ class Bunch(dict, Generic[T]):
             raise ValueError("_config is a reseved name for Bunch")
         if k == "__deepcopy__":
             return None
-        if self.__dict__['_config']["strict_lookup"] and k not in self:
+        if self.__dict__['_config']["strict_lookup"] and not self._contains(k):
             if self._conf('default'):
-                self[k] = new = self.default(k)
-                return new
+                self.__dict__[k] = self.default(k)
+                return self[k]
             raise AttributeError(f"Bunch is missing value for key {k}")
         try:
             # Throws exception if not in prototype chain
@@ -259,6 +272,7 @@ class Bunch(dict, Generic[T]):
         return self.__getattr__(keys)
 
     def __setitem__(self, k: str, v: T):
+        if self._conf('frozen'): raise ValueError("Bunch is frozen")
         for split in self._conf('split'):
             if split in k and split:
                 obj, keys, klast = self, *k.rsplit(split, 1)
@@ -269,6 +283,7 @@ class Bunch(dict, Generic[T]):
         super().__setitem__(k, v)
 
     def __setattr__(self, k: str, v: T):
+        if self._conf('frozen'): raise ValueError("Bunch is frozen")
         if hasattr(super(), k):
             raise ValueError(f"{k} is a reseved name for Bunch")
         if k.startswith('__'):
@@ -288,6 +303,7 @@ class Bunch(dict, Generic[T]):
             self._notify_changed(k, v)
 
     def __delattr__(self, k):
+        if self._conf('frozen'): raise ValueError("Bunch is frozen")
         try:
             # Throws exception if not in prototype chain
             object.__getattribute__(self, k)
@@ -306,6 +322,7 @@ class Bunch(dict, Generic[T]):
     # self._notify_changed(k, v)
 
     def __delitem__(self, k):
+        if self._conf('frozen'): raise ValueError("Bunch is frozen")
         super().__delitem__(k)
         self._notify_changed(k)
 
@@ -320,6 +337,7 @@ class Bunch(dict, Generic[T]):
             self._notify_changed(k, v)
 
     def sub(self, __BUNCH_SUB_ITEMS=None, _onlynone=False, exclude=[], **kw):
+        if self._conf('frozen'): raise ValueError("Bunch is frozen")
         self._autoreload_check()
         if not kw:
             if isinstance(__BUNCH_SUB_ITEMS, dict):

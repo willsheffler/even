@@ -14,3 +14,6 @@ class Missing:
         return True
 
 NA = Missing()
+
+def NoOp(*a, **kw):
+    None

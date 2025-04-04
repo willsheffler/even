@@ -30,9 +30,9 @@ dev = [
 evn = 'evn.tool.__main__:main'
 
 [tool.pytest.ini_options]
-minversion = 6.0
+minversion = '8'
 addopts = ''
-pythonpath = ['.']
+pythonpath = ['evn']
 testpaths = ['evn/tests']
 
 

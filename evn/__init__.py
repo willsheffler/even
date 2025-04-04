@@ -24,6 +24,7 @@ from typing import (
     Callable as Callable,
     cast as cast,
     Iterator as Iterator,
+    IO as IO,
     TypeVar as TypeVar,
     Union as Union,
     Iterable as Iterable,
@@ -46,7 +47,7 @@ builtins.ic = ic  # make ic available globally
 
 evn_init_checkpoint('INIT evn basic imports')
 from evn._prelude.version import __version__ as __version__
-from evn._prelude.basic_types import NA as NA
+from evn._prelude.basic_types import NA as NA, NoOp as NoOp
 from evn._prelude.wraps import wraps as wraps
 from evn._prelude.import_util import (
     is_installed as is_installed,
@@ -131,6 +132,8 @@ from evn.meta import (kwcall as kwcall, kwcheck as kwcheck)
 from evn.print import make_table as make_table
 from evn.cli import CLI as CLI
 
+supports = Bunch(_default=is_installed, _frozen=True)
+
 from evn.dev import (
     capture_asserts as capture_asserts,
     capture_stdio as capture_stdio,
@@ -146,6 +149,8 @@ from evn.dev import (
     show as show,
     diff as diff,
 )
+from evn.testing import maintest as maintest
+from evn.tool import filter_python_output
 
 from evn import (
     config as config,

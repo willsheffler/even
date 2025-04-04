@@ -7,10 +7,6 @@ import evn
 def diff_impl(tree1, tree2, show=True, **kw):
     differ = evn.kwcall(kw, TreeDiffer)
     diff = evn.kwcall(kw, differ.diff, tree1, tree2)
-    if show:
-        with evn.force_stdio():
-            print("Diff zx12:", flush=True)
-            evn.show(diff)
     return diff
 
 class ShallowHandling(Enum):
@@ -74,7 +70,6 @@ class TreeDiffer:
         self._seen_pairs: Set[Tuple[int, int]] = set()
 
     def diff(self, cfg1: Any, cfg2: Any) -> dict:
-        print('diff', flush=True)
         self._seen_pairs.clear()
         result = self._walk(cfg1, cfg2, path=())
         return self._flatten(result) if self.flatpaths else result

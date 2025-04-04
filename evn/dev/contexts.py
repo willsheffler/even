@@ -69,6 +69,10 @@ import sys
 import traceback
 import contextlib
 
+__the_real_stdout__ = sys.__stdout__
+__the_real_stderr__ = sys.__stderr__
+import evn
+
 def onexit(func, msg=None, **metakw):
 
     def wrapper(*args, **kw):
@@ -89,7 +93,7 @@ def set_class(cls, self):
 @contextlib.contextmanager
 def force_stdio():
     """useful as temporary escape hatch with io capuring contexts"""
-    with redirect(sys.__stdout__, sys.__stderr__) as (out, err):
+    with redirect(__the_real_stdout__, __the_real_stderr__) as (out, err):
         try:
             yield out, err
         finally:
@@ -104,25 +108,27 @@ def nocontext():
 
 class TraceWrites(object):
 
-    def __init__(self):
+    def __init__(self, preset):
         self.stdout = sys.stdout
+        self.preset = preset
+        self.log = []
 
     def write(self, s):
-        self.stdout.write("Writing %r\n" % s)
-        # assert 0, 'found your first write...'
-        stack = traceback.format_stack()
-        import evn
-        stack = evn.tool.filter_python_output(os.linesep.join(stack))
-        sys.__stderr__.write('A WRITE TO STDOUT!:\n')
-        sys.__stderr__.write(stack)
+        stack = os.linesep.join(traceback.format_stack())
+        stack = evn.filter_python_output(stack, preset=self.preset, arrows=False)
+        self.log.append(f'\nA WRITE TO STDOUT!: "{s}"{os.linesep}')
+        self.log.append(stack)
 
     def flush(self):
         self.stdout.flush()
 
+    def printlog(self):
+        self.stdout.write(os.linesep.join(self.log))
+
 @contextlib.contextmanager
-def trace_writes_to_stdout():
-    tp = TraceWrites()
-    with redirect(stdout=tp):
+def trace_writes_to_stdout(preset='aggressive'):
+    tp = TraceWrites(preset)
+    with redirect(stdout=tp, after=lambda: tp.printlog()):
         yield tp
 
 @contextlib.contextmanager
@@ -136,7 +142,11 @@ def catch_em_all():
         pass
 
 @contextlib.contextmanager
-def redirect(stdout=sys.stdout, stderr=sys.stderr):
+def redirect(
+    stdout: evn.IO = sys.stdout,
+    stderr: evn.IO = sys.stderr,
+    after: evn.Callable = evn.NoOp,
+):
     """
     Temporarily redirect the stdout and stderr streams.
 
@@ -161,6 +171,7 @@ def redirect(stdout=sys.stdout, stderr=sys.stderr):
     finally:
         sys.stdout.flush(), sys.stderr.flush()
         sys.stdout, sys.stderr = _out, _err
+        if after: after()
 
 @contextlib.contextmanager
 def cd(path):

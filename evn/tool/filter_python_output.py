@@ -6,12 +6,25 @@ import evn
 re_block = re.compile(r'  File "([^"]+)", line (\d+), in (.*)')
 re_end = re.compile(r'(^[A-Za-z0-9.]+Error)(: .*)?')
 re_null = r'a^'  # never matches
-re_presets = dict(boilerplate=dict(
-    file=
-    re.compile(r'ipd/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py'),
-    func=
-    re.compile(r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall'),
-))
+presets = dict(
+    boilerplate=dict(
+        refile=(
+            r'ipd/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py|evn/dev/inspect.py'
+        ),
+        refunc=(
+            r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall'
+        ),
+        minlines=30,
+    ),
+    aggressive=dict(
+        refile=(
+            r'ipd/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py|<module>|evn/contexts.py|multipledispatch/dispatcher.py|evn/dev/inspect.py|meta/kwcall.py'
+        ),
+        refunc=(
+            r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall|main|kwcall'
+        ),
+        minlines=1,
+    ))
 
 def filter_python_output(
     text,
@@ -19,14 +32,17 @@ def filter_python_output(
     re_file=re_null,
     re_func=re_null,
     preset='boilerplate',
-    minlines=30,
+    minlines=None,
     filter_numpy_version_nonsense=True,
     keep_blank_lines=False,
+    arrows=True,
     **kw,
 ):
+    preset = presets[preset]
     # if entrypoint == 'codetool': return text
-    if preset and re_file == re_null: re_file = re_presets[preset]['file']
-    if preset and re_func == re_null: re_func = re_presets[preset]['func']
+    minlines = minlines or preset['minlines']
+    if preset and re_file == re_null: re_file = preset['refile']
+    if preset and re_func == re_null: re_func = preset['refunc']
     if isinstance(re_file, str): re_file = re.compile(re_file)
     if isinstance(re_func, str): re_func = re.compile(re_func)
     result = []
@@ -39,10 +55,10 @@ def filter_python_output(
         line = _strip_line_extra_whitespace(line)
         if not line.strip() and not keep_blank_lines: continue
         if m := re_block.match(line):
-            _finish_block(block, file, func, re_file, re_func, result, skipped)
+            _finish_block(preset, arrows, block, file, func, re_file, re_func, result, skipped)
             file, linene, func, block = *m.groups(), [line]
         elif m := re_end.match(line):
-            _finish_block(block, file, func, re_file, re_func, result, skipped, keep=True)
+            _finish_block(preset, arrows, block, file, func, re_file, re_func, result, skipped, keep=True)
             file, lineno, func, block = None, None, None, None
             result.append(line)
         elif block:
@@ -54,7 +70,7 @@ def filter_python_output(
         text = _filter_numpy_version_nonsense(text)
     return text
 
-def _finish_block(block, file, func, re_file, re_func, result, skipped, keep=False):
+def _finish_block(preset, arrows, block, file, func, re_file, re_func, result, skipped, keep=False):
     if block:
         filematch = re_file.search(file)
         funcmatch = re_func.search(func)
@@ -62,7 +78,7 @@ def _finish_block(block, file, func, re_file, re_func, result, skipped, keep=Fal
             file = os.path.basename(file.replace('/__init__.py', '[init]'))
             skipped.append(file if func == '<module>' else func)
         else:
-            if skipped:
+            if skipped and arrows:
                 # result.append('  [' + str.join('] => [', skipped) + '] =>')
                 result.append('  ' + str.join(' -> ', skipped) + ' ->')
                 skipped.clear()

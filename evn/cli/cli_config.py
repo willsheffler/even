@@ -1,5 +1,5 @@
+from pathlib import Path
 import enum
-import click
 import evn
 from evn.decon.bunch import Bunch, bunchify
 
@@ -32,20 +32,31 @@ def config_app_sync(app, config, action: Action):
 
     def visit(group, path):
         group_items = list(group.commands.items())
-        if group.callback: group_items.append(('_callback', group))
+        if group.callback:
+            group_items.append(('_callback', group))
         for name, method in group_items:
-            if not isinstance(method, click.Group):
-                conf = config._get_split(f'{path} {name}', create=Action.GET_DEFAULT == action)
-                for param in method.params:
-                    assert param.name in conf
-                    if action is Action.CONVERT:
-                        conf[param.name] = param.type.convert(conf[param.name], param, None)
-                    elif action is Action.SET_DEFAULT:
-                        param.default = conf[param.name]
-                    elif action is Action.GET_DEFAULT:
+            conf = config._get_split(f'{path} {name}', create=Action.GET_DEFAULT == action)
+            for param in method.params:
+                assert param.name in conf
+
+                new = param.default
+                if isinstance(new,str): new = f'"{new}foo"'
+                elif isinstance(new,int): new = new + 1
+                elif isinstance(new,float): new = new *2
+                elif isinstance(new,bool): new = not new
+                elif isinstance(new,Path): new = new.parent
+                print(f'config.{'.'.join(path.split())}.{name}{param.name} = {new}')
+
+                if action is Action.CONVERT:
+                    conf[param.name] = param.type.convert(conf[param.name], param, None)
+                elif action is Action.SET_DEFAULT:
+                    if param.default != conf[param.name]:
                         conf[param.name] = param.default
-                    else:
-                        raise ValueError(f"Unknown action {action}")
+                    param.default = conf[param.name]
+                elif action is Action.GET_DEFAULT:
+                    conf[param.name] = param.default
+                else:
+                    raise ValueError(f"Unknown action {action}")
 
     evn.cli.walk_click_group(app.__group__, visitor=visit)
     return bunchify(config, _like=config)

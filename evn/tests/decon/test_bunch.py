@@ -30,7 +30,7 @@ def assert_saved_ok(b):
     assert b == b2
 
 def test_bunch_split_nest():
-    test = Bunch(a='a',_split=' ')
+    test = Bunch(a='a', _split=' ')
     test['foo bar baz'] = 8
     test['foo bar baz2'] = 7
     test['foo bar2 baz'] = 6
@@ -42,14 +42,14 @@ def test_bunch_split_nest():
     # assert test.foo.bar2.baz.but == 5
 
 def test_bunch_split_space():
-    test = Bunch(a='a',_split=' ')
+    test = Bunch(a='a', _split=' ')
     test['foo bar baz'] = 8
     test['foo bar2 baz'] = 6
     assert test.foo.bar.baz == 8
     assert test.foo.bar2.baz == 6
 
 def test_bunch_split_space_get():
-    test = Bunch(a='a',_split=' ')
+    test = Bunch(a='a', _split=' ')
     test['foo bar baz'] = 8
     test['foo bar2 baz'] = 6
     assert test.foo.bar.baz == 8
@@ -58,7 +58,7 @@ def test_bunch_split_space_get():
     assert test._get_split('foo bar2 baz') == 6
 
 def test_bunch_split_dot():
-    test = Bunch(a='a',_split='.')
+    test = Bunch(a='a', _split='.')
     test['foo.bar.baz'] = 8
     test['foo.bar2.baz'] = 8
     assert test.foo.bar.baz == 8
@@ -300,13 +300,13 @@ def test_bunch_strict():
 def test_bunch_default():
     b = Bunch(foo="foo", _default=list, _strict=False)
     assert b.foo == "foo"
-    assert b.bar == list()
+    assert b.bar == []
     assert b["foo"] == "foo"
-    assert b["bar"] == list()
+    assert b["bar"] == []
 
     b = Bunch(foo="foo", _default=list, _strict=False)
     assert b.foo == "foo"
-    assert b.bar == list()
+    assert b.bar == []
 
     b = Bunch(foo="foo", _default=7, _strict=False)
     assert b.foo == "foo"
@@ -393,6 +393,15 @@ def test_bunch_merge():
     a._merge(c)
     assert a.b.c == Bunch(d=1, b=8)
 
+def test_contains_flagmode():
+    flags = Bunch(_default=lambda k: k.startswith('a'), _frozen=True, _flagmode=True)
+    assert flags.a
+    assert flags.abcdesf
+    assert not flags.bnes
+    assert 'africa' in flags
+    assert 'bermuda' not in flags
+    with pytest.raises(ValueError):
+        flags.a = 7
 
 if __name__ == "__main__":
     main()

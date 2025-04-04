@@ -7,24 +7,47 @@ from enum import Enum
 import typing as t
 import evn
 
+import enum
+import pprint
+import evn.tree
+
+class Format(str, enum.Enum):
+    TREE = 'tree'
+    FOREST = 'forest'
+    FANCY = 'fancy'
+    SPIDER = 'spider'
+    PPRINT = 'pprint'
+    JSON = 'json'
+    YAML = 'yaml'
+    RICH = 'rich'
+
 @evn.dispatch(dict)
-def show_impl(d, method='tree', **kw):
-    print('show_impl', method, flush=True)
-    if method == 'fancy':
-        evn.tree.print_fancy_tree(d, **kw)
-    elif method == 'pprint':
-        pprint.pprint(d)
-    elif method == 'tree':
-        evn.tree.print_tree(d, **kw)
-    elif method == 'json':
+def show_impl(dict_, format='spider', **kw):
+    dict_ = evn.tree.sanitize(dict_)
+    try:
+        fmt = Format(format)
+    except ValueError as e:
+        print(f"⚠️ Invalid format '{format}': {e}", flush=True)
+        return
+    if fmt is Format.SPIDER:
+        evn.tree.print_spider_tree(dict_, **kw)
+    elif fmt is Format.FANCY:
+        evn.tree.print_spider_tree(dict_, mirror=False, **kw)
+    elif fmt is Format.PPRINT:
+        pprint.pprint(dict_)
+    elif fmt is Format.TREE:
+        evn.tree.print_tree(dict_, max_width=1, **kw)
+    elif fmt is Format.FOREST:
+        evn.tree.print_tree(dict_, **kw)
+    elif fmt is Format.JSON:
         import json
-        print(json.dump(d))
-    elif method in ['yaml', 'yml']:
+        print(json.dumps(dict_, indent=2))
+    elif fmt is Format.YAML:
         import yaml
-        print(yaml.dump(d))
-    elif method == 'rich':
+        print(yaml.dump(evn.unbunchify(dict_)))
+    elif fmt is Format.RICH:
         import rich
-        tree = evn.tree.rich_tree(d, **kw)
+        tree = evn.tree.rich_tree(dict_, **kw)
         rich.print(tree)
 
 class DiffMode(str, Enum):
@@ -99,7 +122,7 @@ def rich_tree(data, name="root", compact=True, style="bold green", **kw):
     add_node(tree, data)
     console.print(tree)
 
-def print_fancy_tree(
+def print_spider_tree(
     input: dict,
     name='dict',
     orient='vertical',
@@ -294,16 +317,19 @@ def build_tree_blocks_from_branching_aligned(d, compact=True, style="unicode"):
 
 def _columnize_blocks(blocks, max_width, spacing=2):
     widths = [max(len(line) for line in block) for block, _ in blocks]
+    if len(blocks) == 1: return blocks, widths
     lens = [len(block) for block, _ in blocks]
     ncol = max_width // max(widths)
     parts = partition_balanced(lens, ncol, reorder=True)
+    # print(len(parts))
+    # assert 0, f'parts: {parts}'
     colwidth = [max(widths[i] for i in part) + 2 for part in parts]
     cols = [evn.addreduce([blocks[i][0] for i in part]) for part in parts]
     cols = [[l.rstrip().ljust(colwidth[i]) for l in cols[i]] for i in range(len(cols))]
     for c, w in zip(cols, colwidth):
         for _ in range(max(map(len, cols)) - len(c)):
             c.append(' ' * w)
-    assert len(set(len(c) for c in cols)) == 1
+    assert len({len(c) for c in cols}) == 1
     alllines = [''.join(lines) for lines in zip(*cols)]
     return alllines, colwidth
 
@@ -322,8 +348,8 @@ def partition_balanced(nums: list[int], n_parts: int, reorder: bool = True) -> l
     Returns:
         list[list[int]]: A list of `n_parts` sublists of indices into `nums`.
     """
-    if n_parts <= 0:
-        raise ValueError("Number of partitions must be positive")
+    if n_parts < 2:
+        return [list(range(len(nums)))]
     if n_parts > len(nums):
         return [[i] for i in range(len(nums))] + [[] for _ in range(n_parts - len(nums))]
 
