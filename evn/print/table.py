@@ -117,8 +117,8 @@ def to_renderable(obj, textmap=None, strip=True, nohomog=False, precision=3, **k
     if isinstance(obj, bool): return str(obj)
     if isinstance(obj, int): return f'{obj:4}'
     if isinstance(obj, Table): return obj
-    if nohomog and evn.homog.is_tensor(obj): obj = obj[..., :3]
-    s = str(summary(obj))
+    # if nohomog and evn.homog.is_tensor(obj): obj = obj[..., :3]
+    s = str(evn.summary(obj))
     assert "'" not in s
     for pattern, replace in textmap.items():
         if '__REGEX__' in textmap and textmap['__REGEX__']: s = re.sub(pattern, replace, s)

@@ -120,9 +120,10 @@ Future Improvements:
 import time
 import functools
 import inspect
-import numpy as np
 from dataclasses import dataclass, field
 from typing import List, Union
+from evn._prelude.lazy_import import lazyimport
+np = lazyimport('numpy')
 import evn
 
 try:

@@ -23,18 +23,19 @@ def lazyimports(
 
     """
     assert len(names)
-    if len(names) == 0: raise ValueError('package name is required')
+    if not names: raise ValueError('package name is required')
     if package: assert len(package) == len(names) and not isinstance(package, str)
     else: package = ('', ) * len(names)
     modules = [lazyimport(name, package=pkg, **kw) for name, pkg in zip(names, package)]
     return modules
 
 def timed_import_module(name):
-    import evn
-    evn.global_chrono.checkpoint(interject=True)
-    mod = import_module(name)
-    evn.global_chrono.checkpoint(f'LAZY import {name}')
-    return mod
+    # import evn
+    # evn.global_chrono.checkpoint(interject=True)
+    if name not in sys.modules:
+        mod = import_module(name)
+    # evn.global_chrono.checkpoint(f'LAZY import {name}')
+    return sys.modules[name]
 
 def lazyimport(name: str,
                package: str = '',
@@ -43,13 +44,12 @@ def lazyimport(name: str,
                channels: str = '',
                warn: bool = True,
                maybeimport=False) -> ModuleType:
-    if typing.TYPE_CHECKING or maybeimport:
-        try:
-            return timed_import_module(name)
-        except ImportError:
-            return FalseModule(name)
-    else:
+    if not typing.TYPE_CHECKING and not maybeimport:
         return _LazyModule(name, package, pip, mamba, channels, warn)
+    try:
+        return timed_import_module(name)
+    except ImportError:
+        return FalseModule(name)
 
 def maybeimport(name) -> ModuleType:
     return lazyimport(name, maybeimport=True)

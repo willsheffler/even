@@ -10,10 +10,10 @@ def has_pytest_mark(obj, mark):
 
     Example:
     >>> import pytest
-    >>> @pytest.mark.custom
+    >>> @pytest.mark.ci
     ... def test_example(): pass
 
-    >>> print(has_pytest_mark(test_example, 'custom'))
+    >>> print(has_pytest_mark(test_example, 'ci'))
     True
     >>> print(has_pytest_mark(test_example, 'skip'))
     False

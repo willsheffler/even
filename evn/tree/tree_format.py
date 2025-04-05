@@ -2,7 +2,6 @@ import itertools
 import shutil
 import os
 
-from jsondiff import diff
 from enum import Enum
 import typing as t
 import evn

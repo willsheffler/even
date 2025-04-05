@@ -7,9 +7,18 @@ re_block = re.compile(r'  File "([^"]+)", line (\d+), in (.*)')
 re_end = re.compile(r'(^[A-Za-z0-9.]+Error)(: .*)?')
 re_null = r'a^'  # never matches
 presets = dict(
+    unittest=dict(
+        refile=(
+            r'maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py'
+        ),
+        refunc=(
+            r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall'
+        ),
+        minlines=30,
+    ),
     boilerplate=dict(
         refile=(
-            r'ipd/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py|evn/dev/inspect.py'
+            r'maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py|evn/dev/inspect.py'
         ),
         refunc=(
             r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall'
@@ -18,7 +27,7 @@ presets = dict(
     ),
     aggressive=dict(
         refile=(
-            r'ipd/tests/maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py|<module>|evn/contexts.py|multipledispatch/dispatcher.py|evn/dev/inspect.py|meta/kwcall.py'
+            r'maintest\.py|icecream/icecream.py|/pprint.py|lazy_import.py|<.*>|numexpr/__init__.py|hydra/_internal/defaults_list.py|click/core.py|/typer/main.py|/assertion/rewrite.py|/_[A-Za-z0-9i]*.py|site-packages/_pytest/.*py|<module>|evn/contexts.py|multipledispatch/dispatcher.py|evn/dev/inspect.py|meta/kwcall.py'
         ),
         refunc=(
             r'<module>|main|call_with_args_from|wrapper|print_table|make_table|import_module|import_optional_dependency|kwcall|main|kwcall'

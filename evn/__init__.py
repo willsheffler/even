@@ -92,8 +92,6 @@ from evn._prelude.typehints import (
     isseqmut as isseqmut,
     ismapmut as ismapmut,
     isiter as isiter,
-    Vec as Vec,
-    Point as Point,
     FieldSpec as FieldSpec,
     EnumerIter as EnumerIter,
     EnumerListIter as EnumerListIter,

@@ -1,8 +1,8 @@
 from typing import Sequence, Any
-import numpy as np
 import typing
 import operator
 import evn
+np = evn.lazyimport('numpy')
 
 T = typing.TypeVar('T')
 
@@ -80,7 +80,7 @@ class ContiguousTokens:
     idmap: dict = evn.dc.field(default_factory=dict)
     _offset: int = 0
 
-    def __call__(self, ids: np.ndarray, reset=False):
+    def __call__(self, ids: 'np.ndarray', reset=False):
         if reset:
             self._offset += len(self.idmap)
             self.idmap.clear()

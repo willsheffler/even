@@ -8,13 +8,16 @@ version = '0.1.0'
 requires-python = '>=3.9'
 dependencies = [
     'assertpy',
+    'click',
     'icecream',
     'multipledispatch',
     'PrettyPrintTree',
     'pyyaml',
     'rapidfuzz',
+    'rich',
     'ruff',
-    'wrapt',
+    'typing_extensions; python_version < "3.10"',
+    # 'wrapt',
 ]
 
 [project.optional-dependencies]
@@ -54,7 +57,21 @@ lint.ignore = [
 ]
 lint.dummy-variable-rgx = '^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?)|ic)$'
 line-length = 113
-target-version = 'py39'
+target-version = 'py313'
 format.quote-style = 'single'
 format.indent-style = 'space'
 format.docstring-code-format = true
+
+[tool.pyright]
+venvPath = '/home/sheffler/sw/MambaForge/envs'
+venv = 'rfdsym312'
+# venvPath = /home/sheffler/rfd/lib/evn
+# venv = .venv
+# defineConstant = { DEBUG = true }
+# typeCheckingMode = enhanced
+typeCheckingMode = 'standard'
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedExpression = false
+pythonPlatform = 'Linux'
+pythonVersion = 3.13

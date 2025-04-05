@@ -52,3 +52,27 @@ def task_test():
         'actions': ['pytest evn/tests'],
         'task_dep': ['import_check'],
     }
+
+def task_wheel():
+    return dict(actions=[f'cibuildwheel --only cp3{ver}-manylinux_x86_64' for ver in range(9, 14)],
+                file_dep=[
+                    'evn/format/_common.hpp', 'evn/format/_detect_formatted_blocks.cpp',
+                    'evn/format/_token_column_format.cpp'
+                ],
+                targets=[
+                    'wheelhouse/evn-0.1.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl'
+                ])
+
+def task_nox():
+    return dict(actions=['nox'],
+                file_dep=[
+                    'wheelhouse/evn-0.1.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl',
+                    'wheelhouse/evn-0.1.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl'
+                ])

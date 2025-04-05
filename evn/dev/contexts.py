@@ -263,7 +263,9 @@ def cd_project_root():
 @contextlib.contextmanager
 def np_printopts(**kw):
     np = evn.maybeimport('numpy')
-    if not np: return nocontext()
+    if not np:
+        yield None
+        return
     npopt = np.get_printoptions()
     try:
         np.set_printoptions(**kw)

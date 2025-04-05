@@ -9,31 +9,34 @@ def helper_test_filter_python_output(text, ref, preset):
     result = evn.filter_python_output(text, preset=preset, minlines=0)
     if result != ref:
         diff = difflib.ndiff(result.splitlines(), ref.splitlines())
-        print('\nDIFF:', flush=True)
-        print('\n'.join(f'NDIFF {d}' for d in diff), flush=True)
+        # print('\nDIFF:', flush=True)
+        # print('\n'.join(f'NDIFF {d}' for d in diff), flush=True)
+        print('-----')
+        print(text)
+        print('-----')
         assert len(result.splitlines()) == len(ref.splitlines())
-        # assert 0, 'filter mismatch'
+        assert 0, 'filter mismatch'
 
 @pytest.mark.xfail
 def test_filter_python_output_whitespace():
-    result = evn.filter_python_output("    \n" * 7, preset='boilerplate')
+    result = evn.filter_python_output("    \n" * 7, preset='unittest')
     assert result.count('\n') == 1
 
 def test_filter_python_output_mid():
-    helper_test_filter_python_output(midtext, midfiltered, preset='boilerplate')
+    helper_test_filter_python_output(midtext, midfiltered, preset='unittest')
 
 def test_filter_python_output_small():
-    helper_test_filter_python_output(smalltext, smallfiltered, preset='boilerplate')
+    helper_test_filter_python_output(smalltext, smallfiltered, preset='unittest')
 
 def test_filter_python_output_error():
-    helper_test_filter_python_output(errortext, errorfiltered, preset='boilerplate')
+    helper_test_filter_python_output(errortext, errorfiltered, preset='unittest')
 
 def test_analyze_python_errors_log():
     log = '''Traceback (most recent call last):
   File "example.py", line 10, in <module>
     1/0
 ZeroDivisionError: division by zero'''
-    result = evn.analyze_python_errors_log(log)
+    result = evn.tool.analyze_python_errors_log(log)
     # print(result)
     assert 'Unique Stack Traces Report (1 unique traces):' in result
     assert 'ZeroDivisionError: division by zero' in result
@@ -47,7 +50,7 @@ def test_create_errors_log_report():
 ZeroDivisionError: division by zero'''
     }
 
-    report = evn.create_errors_log_report(trace_map)
+    report = evn.tool.create_errors_log_report(trace_map)
     assert 'Unique Stack Traces Report (1 unique traces):' in report
     assert 'ZeroDivisionError: division by zero' in report
 
@@ -62,7 +65,7 @@ Traceback (most recent call last):
     x = int("abc")
 ValueError: invalid literal for int()'''
 
-    result = evn.analyze_python_errors_log(log)
+    result = evn.tool.analyze_python_errors_log(log)
     assert 'Unique Stack Traces Report (2 unique traces):' in result
     assert 'ZeroDivisionError: division by zero' in result
     assert 'ValueError: invalid literal for int()' in result
@@ -78,7 +81,7 @@ Traceback (most recent call last):
     1/0
 ZeroDivisionError: division by zero'''
 
-    result = evn.analyze_python_errors_log(log)
+    result = evn.tool.analyze_python_errors_log(log)
     assert 'Unique Stack Traces Report (1 unique traces):' in result
     assert 'ZeroDivisionError: division by zero' in result
     assert result.count('ZeroDivisionError') == 1
@@ -94,7 +97,7 @@ Traceback (most recent call last):
     1/0
 ZeroDivisionError: division by zero'''
 
-    result = evn.analyze_python_errors_log(log)
+    result = evn.tool.analyze_python_errors_log(log)
     assert 'Unique Stack Traces Report (2 unique traces):' in result
     assert 'ZeroDivisionError: division by zero' in result
     assert result.count('ZeroDivisionError') == 2
@@ -102,10 +105,6 @@ ZeroDivisionError: division by zero'''
 # ######################### test data #######################
 errortext = """maintest /home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py:
 Traceback (most recent call last):
-  File "/home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py", line 151, in <module>
-    main()
-  File "/home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py", line 6, in main
-    TEST.tests.maintest(namespace=globals())
   File "/home/sheffler/rfd/TEST/tests/maintest.py", line 40, in maintest
     _maintest_run_test_function(name, func, result, nofail, fixtures, funcsetup, kw)
   File "/home/sheffler/rfd/TEST/tests/maintest.py", line 80, in _maintest_run_test_function
@@ -123,7 +122,13 @@ Times(name=Timer, order=longest, summary=sum):
 """
 errorfiltered = """maintest /home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py:
 Traceback (most recent call last):
-  test_filter_python_output.py -> main -> maintest -> _maintest_run_test_function -> call_with_args_from ->
+  File "/home/sheffler/rfd/TEST/tests/maintest.py", line 40, in maintest
+    _maintest_run_test_function(name, func, result, nofail, fixtures, funcsetup, kw)
+  File "/home/sheffler/rfd/TEST/tests/maintest.py", line 80, in _maintest_run_test_function
+    TEST.dev.call_with_args_from(fixtures, func, **kw)
+  File "/home/sheffler/rfd/TEST.dev.decorators.py", line 33, in call_with_args_from
+    return func(**args)
+           ^^^^^^^^^^^^
   File "/home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py", line 19, in test_filter_python_output_small
     helper_test_filter_python_output(smalltext, smallfiltered, preset='boilerplate')
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -282,7 +287,20 @@ extra text at the end
 
 smallfiltered = """extra text at the start
 Traceback (most recent call last):
-  test_filter_python_output.py -> main -> maintest -> _maintest_run_test_function -> _maintest_run_test_function -> call_with_args_from ->
+  File "/home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py", line 92, in <module>
+    main()
+  File "/home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py", line 6, in main
+    TEST.tests.maintest(namespace=globals())
+  File "/home/sheffler/rfd/TEST/tests/maintest.py", line 40, in maintest
+    _maintest_run_test_function(name, func, result, nofail, fixtures, funcsetup, kw)
+  File "/home/sheffler/rfd/TEST/tests/maintest.py", line 93, in _maintest_run_test_function
+    elif error: raise error
+                ^^^^^^^^^^^
+  File "/home/sheffler/rfd/TEST/tests/maintest.py", line 80, in _maintest_run_test_function
+    TEST.dev.call_with_args_from(fixtures, func, **kw)
+  File "/home/sheffler/rfd/TEST.dev.decorators.py", line 33, in call_with_args_from
+    return func(**args)
+           ^^^^^^^^^^^^
   File "/home/sheffler/rfd/lib/TEST/TEST/tests/dev/code/test_filter_python_output.py", line 13, in test_filter_python_output
     assert 0
            ^

@@ -9,8 +9,9 @@ from collections.abc import Mapping
 import itertools
 from functools import partial
 import operator
+from evn._prelude.lazy_import import lazyimport
 
-import numpy as np
+np = lazyimport('numpy')
 
 import evn
 
@@ -27,8 +28,7 @@ def get_available_result_types():
 class Missing:
     pass
 
-def item_wise_operations(cls0: evn.Optional[type[evn.C]] = Missing,
-                            result_types='map val np') -> type[evn.C]:
+def item_wise_operations(cls0: evn.Optional[type[evn.C]] = Missing, result_types='map val') -> type[evn.C]:
     """Decorator that adds element-wise operation capabilities to a class.
 
     Adds up to four attributes to the decorated class:
@@ -44,6 +44,7 @@ def item_wise_operations(cls0: evn.Optional[type[evn.C]] = Missing,
     Returns:
         The decorated class
     """
+    if evn.is_installed('numpy'): result_types = f'np {result_types}'
     if cls0 is Missing:
         return partial(item_wise_operations, result_types=result_types)
     orig = result_types

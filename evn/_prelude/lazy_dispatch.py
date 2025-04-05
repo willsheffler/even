@@ -82,7 +82,7 @@ class LazyDispatcher:
 
         return self._base_func(obj, *args, **kwargs)
 
-def lazydispatch(arg=None, *, scope: Optional[str] = None):
+def lazydispatch(arg=None, *, scope: Optional[str] = None) -> LazyDispatcher:
     if not isinstance(arg, type) and callable(arg):
         # Case: used as @lazydispatch without arguments
         return LazyDispatcher(arg, scope=scope)

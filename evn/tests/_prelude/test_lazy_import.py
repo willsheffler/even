@@ -12,8 +12,8 @@ def main():
 
 def test_broken_package():
     if 'doctest' not in sys.modules:
-        borked = lazyimport('evn.data.tests.broken_py_file')
-        with pytest.raises(evn.LazyImportError) as e:
+        borked = lazyimport('evn.tests._prelude.broken_py_file')
+        with pytest.raises(ImportError):
             borked.foo
 
 def test_maybeimport():

@@ -1,3 +1,4 @@
+import tomllib
 import json
 import glob
 import nox
@@ -11,13 +12,19 @@ sesh = dict(python=["3.9", "3.10", "3.11", "3.12", "3.13"], venv_backend='uv')
 @nox.session(**sesh)
 def test_matrix(session):
     nprocs = min(8, os.cpu_count() or 1)
+    session.install('packaging')
     if session.posargs and (session.python) != session.posargs[0]:
         session.skip(f"Skipping {session.python} because it's not in posargs {session.posargs}")
-    session.install(*'ruff pytest pytest-xdist pytest-repeat'.split())
+    # session.install(*'-e .[dev]'.split())
     whl = select_wheel(session)
     print(f"Installing {whl}")
-    session.install(whl)
-    session.run(*f'pytest -n{nprocs} --count 1 --doctest-modules --pyargs evn'.split())
+    session.install(f'{whl}')
+    with open('pyproject.toml', 'rb') as f:
+        conf = tomllib.load(f)
+        deps = conf['project']['dependencies']
+        deps += conf['project']['optional-dependencies']['dev']
+    session.install(*deps)
+    session.run(*'pytest --doctest-modules --pyargs evn'.split())
 
 def get_supported_tags_session(session):
     result = session.run(

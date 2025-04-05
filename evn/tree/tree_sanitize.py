@@ -19,7 +19,7 @@ def sanitize(obj):
     if isinstance(obj, Mapping):
         return {sanitize(k): sanitize(v) for k, v in obj.items()}
     if evn.supports.numpy:
-        import numpy as np
+        np = evn.lazyimport('numpy')
         if isinstance(obj, np.ndarray):
             return obj.tolist()
     if evn.supports.torch:

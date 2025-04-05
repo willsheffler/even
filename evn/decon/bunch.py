@@ -422,7 +422,7 @@ class Bunch(dict, Generic[T]):
             s = str(thing)
             if len(s) > 80:
                 with contextlib.suppress(ImportError):
-                    import numpy as np
+                    np = evn.lazyimport('numpy')
 
                     if isinstance(thing, np.ndarray):
                         s = f"shape {thing.shape}"

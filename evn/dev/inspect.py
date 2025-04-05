@@ -41,13 +41,13 @@ def summary(obj, **kw) -> str:
     return obj
 
 @summary.register('numpy.ndarray')
-def summary(array, maxnumel):
+def _(array, maxnumel=24):
     if array.size <= maxnumel:
         return str(array)
     return f'{array.__class__.__name__}{list(array.shape)}'
 
 @summary.register('torch.Tensor')
-def summary(tensor, maxnumel):
+def _(tensor, maxnumel=24):
     if tensor.numel <= maxnumel:
         return str(tensor)
     return f'{tensor.__class__.__name__}{list(tensor.shape)}'
