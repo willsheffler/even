@@ -22,7 +22,7 @@ class Format(str, enum.Enum):
     RICH = 'rich'
 
 @evn.dispatch(dict)
-def show_impl(dict_, format='spider', **kw):
+def show_impl(dict_, format='forest', **kw):
     dict_ = evn.tree.sanitize(dict_)
     try:
         fmt = Format(format)
@@ -366,7 +366,7 @@ def partition_balanced(nums: list[int], n_parts: int, reorder: bool = True) -> l
             partitions[i].append(idx)
             heapq.heappush(heap, (current_sum + val, i))
 
-        return partitions
+        return [list(sorted(p)) for p in partitions]
 
     # --- ORDER-PRESERVING PARTITIONING (Linear Partition DP) ---
     n = len(nums)

@@ -49,7 +49,6 @@ def test_config_includes_all_layers(monkeypatch):
 
 def test_config_includes_callbacks():
     config = get_config(TestApp)
-    # print_config(config)
     assert config.testapp._callback.foo == "bar"
     assert config.testapp.doccheck._callback.docsdir == "docs"
 

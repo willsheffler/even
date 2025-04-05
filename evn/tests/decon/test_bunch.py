@@ -403,5 +403,14 @@ def test_contains_flagmode():
     with pytest.raises(ValueError):
         flags.a = 7
 
+def test_bunch_copy():
+    b = Bunch(a=1, b=Bunch(c=Bunch(d='foo')), c=3)
+    strb = str(b)
+    b2 = b.copy()
+    assert b == b2
+    b2.b.c.d = 7
+    assert b != b2
+    assert str(b2) != strb
+
 if __name__ == "__main__":
     main()

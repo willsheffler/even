@@ -1,6 +1,15 @@
 from time import perf_counter
+from pathlib import Path as Path
 
 _start, _timings = perf_counter(), {}
+
+pkgroot = Path(__file__).parent.absolute()
+projroot = pkgroot.parent
+evn_installed = False
+projconf = projroot / 'pyproject.toml'
+if not (projroot / 'pyproject.toml').exists:
+    projroot = None
+    evn_installed = True
 
 def evn_init_checkpoint(name):
     global _start, _timings
@@ -15,7 +24,6 @@ import itertools as it  # noqa
 import contextlib as cl  # noqa
 import os as os  # noqa
 import sys as sys  # noqa
-from pathlib import Path as Path
 from copy import copy as copy, deepcopy as deepcopy
 from multipledispatch import dispatch as dispatch
 from typing import (
@@ -34,9 +42,6 @@ from typing import (
     MutableSequence as MutableSequence,
     Optional as Optional,
 )
-
-pkgroot = Path(__file__).parent.absolute()
-projroot = pkgroot.parent
 
 from icecream import ic as ic
 
@@ -61,6 +66,9 @@ from evn._prelude.lazy_import import (
     maybeimport as maybeimport,
     maybeimports as maybeimports,
     LazyImportError as LazyImportError,
+)
+from evn._prelude.lazy_dispatch import (
+    lazydispatch as lazydispatch
 )
 from evn._prelude.structs import (
     struct as struct,
@@ -132,22 +140,28 @@ from evn.meta import (kwcall as kwcall, kwcheck as kwcheck)
 from evn.print import make_table as make_table
 from evn.cli import CLI as CLI
 
-supports = Bunch(_default=is_installed, _frozen=True)
+installed = Bunch(_default=is_installed, _frozen=True)
 
-from evn.dev import (
+from evn.dev.contexts import (
     capture_asserts as capture_asserts,
     capture_stdio as capture_stdio,
     catch_em_all as catch_em_all,
     cd as cd,
+    cd_project_root as cd_project_root,
     force_stdio as force_stdio,
     just_stdout as just_stdout,
     nocontext as nocontext,
     redirect as redirect,
     set_class as set_class,
     trace_writes_to_stdout as trace_writes_to_stdout,
+    np_printopts as np_printopts,
+    np_compact as np_compact,
+)
+from evn.dev.inspect import (
     inspect as inspect,
     show as show,
     diff as diff,
+    summary as summary,
 )
 from evn.testing import maintest as maintest
 from evn.tool import filter_python_output
@@ -238,6 +252,6 @@ from evn import (
 
 # if _global_chrono: _global_chrono.checkpoints.update(_timings)
 # else: _global_chrono = Chrono(checkpoints=_timings)
-# dev.global_timer.checkpoints.update(_timings)
+# dev.global_chrono.checkpoints.update(_timings)
 
 # caching_enabled = True

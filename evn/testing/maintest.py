@@ -51,7 +51,7 @@ def maintest(namespace, config=evn.Bunch(), **kw):
         print(f'maintest "{namespace["__file__"]}":', flush=True)
     else:
         print(f'maintest "{orig}":', flush=True)
-    # evn.onexit(evn.global_timer.report, timecut=0.01, spacer=1)
+    # evn.onexit(evn.global_chrono.report, timecut=0.01, spacer=1)
     config = TestConfig(**config, **kw)
     config.detect_fixtures(namespace)
     evn.kwcall(config, evn.meta.filter_namespace_funcs, namespace)
@@ -63,7 +63,7 @@ def maintest(namespace, config=evn.Bunch(), **kw):
             test_suites.append((name, timed(obj)))
         elif _test_func_ok(name, obj):
             test_funcs.append((name, timed(obj)))
-    # evn.global_timer.checkpoint('maintest')
+    # evn.global_chrono.checkpoint('maintest')
     result = TestResult()
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = evn.Path(tmpdir)

@@ -237,3 +237,39 @@ def optional_imports():
         contextlib.suppress(ImportError)
     """
     return contextlib.suppress(ImportError)
+
+@contextlib.contextmanager
+def modloaded(pkg):
+    try:
+        if pkg in sys.modules: yield sys.modules[pkg]
+        else: yield None
+    finally:
+        pass
+
+@contextlib.contextmanager
+def cd_project_root():
+    """
+    Change to the project root directory.
+
+    Yields:
+        bool: True if the project root exists, False otherwise.
+    """
+    if root := evn.projroot:
+        with cd(root):
+            yield True
+    else:
+        yield False
+
+@contextlib.contextmanager
+def np_printopts(**kw):
+    np = evn.maybeimport('numpy')
+    if not np: return nocontext()
+    npopt = np.get_printoptions()
+    try:
+        np.set_printoptions(**kw)
+        yield None
+    finally:
+        np.set_printoptions(**{k: npopt[k] for k in kw})
+
+def np_compact(precision=4, suppress=True, **kw):
+    return np_printopts(precision=precision, suppress=suppress, **kw)

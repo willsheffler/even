@@ -39,7 +39,7 @@ __pycache__
 *.out
 *.app
 
-/.doit.db
-/.doit.db.db
-/_build
+.doit.db
+.doit.db.*
+_build
 *.sublime-workspace

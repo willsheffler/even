@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 from dataclasses import dataclass, field
 from evn.format import IdentifyFormattedBlocks, PythonLineTokenizer
+import evn
 
 @dataclass
 class FormatHistory:
@@ -98,7 +99,7 @@ class RuffFormat(FormatStep):
 
     def apply_formatting(self, code: str, history: Optional[FormatHistory] = None) -> str:
         try:
-            cmd = ["ruff", "format", "-"],  # `-` tells ruff to read from stdin
+            cmd = ["ruff", '--config', evn.projconf, "format", "-"],  # `-` tells ruff to read from stdin
             process = subprocess.run(*cmd, input=code, text=True, capture_output=True, check=True)
             return process.stdout
         except subprocess.CalledProcessError as e:

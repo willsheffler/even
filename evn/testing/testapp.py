@@ -16,6 +16,16 @@ class TestApp(CLI):
         """
         print(f"[evn.version] Version info (verbose={verbose})")
 
+    def name_with_under_scores(self): ...
+
+    def _private_meth(self): ...
+
+    @classmethod
+    def _private_func(cls): ...
+
+    @staticmethod
+    def _static_func(): ...
+
     @classmethod
     def _callback(cls, foo='bar'):
         """

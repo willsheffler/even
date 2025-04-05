@@ -40,7 +40,7 @@ def measure_runtime(func):
 @chrono_class
 class TestClass:
 
-    def __init__(self):
+    def setUp(self):
         self.runtime = {"method1": [], "method2": [], "recursive": [], "generator": []}
 
     @measure_runtime

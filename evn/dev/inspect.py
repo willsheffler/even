@@ -1,3 +1,4 @@
+import os
 from multipledispatch import dispatch
 import rich
 import evn
@@ -13,8 +14,7 @@ def show(obj, show=True, flush=True, **kw):
     assert not result
     if show and (result or printed):
         with evn.force_stdio():
-            # if 'PYTEST_CU66RRENT_TEST' in os.environ:
-                # print()
+            if 'PYTEST_CURRENT_TEST' in os.environ: print()
             evn.kwcall(kw, print, printed or result, flush=flush)
     return result
 
@@ -33,3 +33,21 @@ def show_impl(obj, **kw):
 @dispatch(object, object)
 def diff_impl(obj1, obj2, **kw):
     return set(obj1) ^ set(obj2)
+
+@evn.lazydispatch
+def summary(obj, **kw) -> str:
+    if hasattr(obj, 'summary'): return obj.summary()
+    if isinstance(obj, (list, tuple)): return str([summary(o, **kw) for o in obj])
+    return obj
+
+@summary.register('numpy.ndarray')
+def summary(array, maxnumel):
+    if array.size <= maxnumel:
+        return str(array)
+    return f'{array.__class__.__name__}{list(array.shape)}'
+
+@summary.register('torch.Tensor')
+def summary(tensor, maxnumel):
+    if tensor.numel <= maxnumel:
+        return str(tensor)
+    return f'{tensor.__class__.__name__}{list(tensor.shape)}'

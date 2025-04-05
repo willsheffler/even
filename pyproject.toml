@@ -32,8 +32,12 @@ evn = 'evn.tool.__main__:main'
 [tool.pytest.ini_options]
 minversion = '8'
 addopts = ''
-pythonpath = ['evn']
+pythonpath = ['.']
 testpaths = ['evn/tests']
+markers = [
+    'slow: marks tests as slow to run',
+    'ci: tests that should only run in ci',
+]
 
 
 [tool.ruff]

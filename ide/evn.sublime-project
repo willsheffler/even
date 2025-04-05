@@ -29,8 +29,17 @@
     "build_systems":
     [
         {
+            "name": "pytest all",
+            "working_dir": "$folder",
+            "shell_cmd": "\\$PYTEST evn/tests/_prelude/test_lazy_dispatch.py -xs 2>&1 | tee $folder/ide/sublime_build.log",
+            // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
+            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
+            "file_regex": "^E?(.+\\.py):([0-9]+): "
+
+        },
+        {
             "name": "run file",
-            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTHON $file 2>&1 | tee $folder/ide/sublime_build.log",
+            "shell_cmd": "cd $folder; PYTHONPATH=. \\$PYTEST $file 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^(.+\\.py):([0-9]+): "
 
@@ -48,15 +57,6 @@
             "name": "pytest treediff",
             "working_dir": "$folder",
             "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/tree 2>&1 | tee $folder/ide/sublime_build.log",
-            // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
-            // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
-            "file_regex": "^E?(.+\\.py):([0-9]+): "
-
-        },
-        {
-            "name": "pytest",
-            "working_dir": "$folder",
-            "shell_cmd": "PYTHONPATH=. \\$PYTEST evn/tests/decon evn/tests/config evn/tests/cli evn/cli evn/tests/format -xs 2>&1 | tee $folder/ide/sublime_build.log",
             // "file_regex": "^(?:\\s*File \"(.*?)\", line ([0-9]+)|(.+\\.py):([0-9]+):)"
             // "file_regex": "^\\s*File \"(...*?)\", line ([0-9]*)"
             "file_regex": "^E?(.+\\.py):([0-9]+): "

@@ -20,10 +20,10 @@ class FormatHistory:
         """Retrieve the formatted code."""
         return self.buffers[filename]["formatted"]
 
-############################## test with ###############################
+############################## test oneline spaces ###############################
 with open('/tmp/test.txt'):     pass
-############################## test with reference ###############################
+#----------------------------- ↑ original ↓ formatted ----------------------------
 with open('/tmp/test.txt'): pass
-
+################################################################################
 
 

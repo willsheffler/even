@@ -31,9 +31,9 @@ def lazyimports(
 
 def timed_import_module(name):
     import evn
-    evn.global_timer.checkpoint(interject=True)
+    evn.global_chrono.checkpoint(interject=True)
     mod = import_module(name)
-    evn.global_timer.checkpoint(f'LAZY import {name}')
+    evn.global_chrono.checkpoint(f'LAZY import {name}')
     return mod
 
 def lazyimport(name: str,
@@ -85,7 +85,7 @@ class _LazyModule(ModuleType):
             return timed_import_module(self._lazymodule_name)
         except ImportError as e:
             if 'doctest' in sys.modules: return FalseModule(self._lazymodule_name)
-            if hasattr('_lazymodule_callerinfo', self):
+            if hasattr(self, '_lazymodule_callerinfo'):
                 ci = self._lazymodule_callerinfo
                 callinfo = f'\n  File "{ci.filename}", line {ci.lineno}\n    {ci.code}'
                 raise LazyImportError(callinfo) from e

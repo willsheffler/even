@@ -13,20 +13,7 @@ config_test = evn.Bunch(
 )
 
 def main():
-    test_with_custom_mark()
-    test_has_pytest_mark_positive()
-    test_has_pytest_mark_negative()
-    test_has_pytest_mark_no_marks()
-    test_with_skip()
-    test_no_pytest_skip_false()
-    test_no_pytest_skip_true()
-    # test_with_parametrize(x, y)
-    test_get_pytest_params()
-    test_get_pytest_params_none()
-    test_is_skipped()
-    test_is_parametrized()
-    return
-    maintest(
+    evn.testing.maintest(
         namespace=globals(),
         config=config_test,
         verbose=1,
@@ -35,15 +22,15 @@ def main():
 
 # ==== TESTS FOR has_pytest_mark ====
 
-@pytest.mark.custom
-def test_with_custom_mark():
+@pytest.mark.ci
+def test_with_ci_mark():
     pass
 
 def test_has_pytest_mark_positive():
-    assert has_pytest_mark(test_with_custom_mark, 'custom') is True
+    assert has_pytest_mark(test_with_ci_mark, 'ci') is True
 
 def test_has_pytest_mark_negative():
-    assert has_pytest_mark(test_with_custom_mark, 'skip') is False
+    assert has_pytest_mark(test_with_ci_mark, 'skip') is False
 
 def test_has_pytest_mark_no_marks():
 
@@ -98,7 +85,7 @@ def is_parametrized(func):
 
 def test_is_skipped():
     assert is_skipped(test_with_skip) is True
-    assert is_skipped(test_with_custom_mark) is False
+    assert is_skipped(test_with_ci_mark) is False
 
 def test_is_parametrized():
     assert is_parametrized(test_with_parametrize) is True

@@ -1,7 +1,6 @@
 from collections.abc import Mapping, Iterable
 import difflib
 import re
-import sys
 
 import rich
 from rich.table import Table
@@ -126,15 +125,6 @@ def to_renderable(obj, textmap=None, strip=True, nohomog=False, precision=3, **k
         else: s = s.replace(pattern, str(replace))
     if strip: s = s.strip()
     return s
-
-# @iterize_on_first_param(allowmap=True)
-def summary(obj) -> str:
-    if hasattr(obj, 'summary'): return obj.summary()
-    # if evn.homog.is_tensor(obj): return evn.homog.tensor_summary(obj)
-    if (bs := sys.modules.get('biotite.structure')) and isinstance(obj, bs.AtomArray):
-        return f'AtomArray({len(obj)})'
-    if isinstance(obj, (list, tuple)): return [summary(o) for o in obj]
-    return obj
 
 def diff(ref: str, new: str) -> None:
     # Use difflib to create a unified diff
